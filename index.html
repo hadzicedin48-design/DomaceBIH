@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="bs">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Domaće BiH</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+  <div class="splash" id="splash">
+    <img src="logo.png" alt="Logo" class="logo">
+    <h1>DOMAĆE BIH</h1>
+    <p>LOKALNO, SVJEŽE, ZDRAVO</p>
+    <div class="loader"></div>
+    <p class="loading-text">Učitavanje...</p>
+  </div>
+
+  <div class="app" id="app" style="display:none;">
+    <div class="screen" id="screen-home">
+      <header><div class="logo-small">DOMAĆE BIH</div></header>
+      <div class="search-bar"><input type="text" id="search" placeholder="Pretraži proizvode..." oninput="renderAll()"></div>
+      <div class="filters" id="home-filters"></div>
+      <div class="toolbar">
+        <select id="sort" onchange="renderAll()">
+          <option value="new">Najnovije</option>
+          <option value="price-asc">Cijena ↑</option>
+          <option value="price-desc">Cijena ↓</option>
+          <option value="distance">Najbliže</option>
+        </select>
+        <select id="price-filter" onchange="renderAll()">
+          <option value="all">Sve cijene</option>
+          <option value="0-5">do 5 KM</option>
+          <option value="5-15">5 – 15 KM</option>
+          <option value="15-30">15 – 30 KM</option>
+          <option value="30+">preko 30 KM</option>
+        </select>
+      </div>
+      <div id="map"></div>
+      <div class="section-title">Proizvodi u blizini</div>
+      <div class="products" id="home-products"></div>
+    </div>
+
+    <div class="screen" id="screen-detail" style="display:none;">
+      <header>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span onclick="showScreen('home')" style="cursor:pointer;font-size:22px;">←</span>
+          <div class="logo-small">Detalj oglasa</div>
+        </div>
+      </header>
+      <div id="detail-content"></div>
+    </div>
+
+    <div class="screen" id="screen-myads" style="display:none;">
+      <header><div class="logo-small">Moji oglasi</div></header>
+      <div id="stats" class="stats-bar"></div>
+      <div class="products" id="my-ads-list"></div>
+    </div>
+
+    <div class="screen" id="screen-add" style="display:none;">
+      <header><div class="logo-small" id="add-header">Dodaj oglas</div></header>
+      <div class="form">
+        <input type="hidden" id="edit-id">
+        <label>Naziv proizvoda</label>
+        <input type="text" id="ad-title" placeholder="npr. Domaći med">
+        <label>Kategorija</label>
+        <select id="ad-category">
+          <option>Voće</option><option>Povrće</option><option>Mlijeko</option>
+          <option>Meso</option><option>Jaja</option><option>Med</option><option>Ostalo</option>
+        </select>
+        <label>Cijena (KM)</label>
+        <input type="text" id="ad-price" placeholder="npr. 15">
+        <label>Opis</label>
+        <textarea id="ad-desc" placeholder="Kratki opis..."></textarea>
+        <label>Lokacija</label>
+        <input type="text" id="ad-location" value="Bosanska Krupa">
+        <label>Broj telefona</label>
+        <input type="text" id="ad-phone" placeholder="065/123-456">
+        <label>Slike (max 3)</label>
+        <input type="file" id="ad-images" accept="image/*" multiple onchange="previewImages(this)">
+        <div id="image-previews" class="previews"></div>
+        <button class="btn-green" id="save-btn" onclick="saveAd()">Objavi oglas</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-profile" style="display:none;">
+      <header><div class="logo-small">Profil</div></header>
+      <div id="profile-logged" style="display:none;">
+        <div class="profile-box">
+          <div class="avatar">👤</div>
+          <h3>Edin Hadžić</h3>
+          <p>Bosanska Krupa, BiH</p>
+          <p id="profile-phone" class="phone-display"></p>
+        </div>
+        <div class="menu-list">
+          <div class="menu-item" onclick="showScreen('myads')">📋 Moji oglasi</div>
+          <div class="menu-item" onclick="openAdd()">➕ Dodaj oglas</div>
+          <div class="menu-item" onclick="showPhoneEdit()">📞 Promijeni broj telefona</div>
+          <div class="menu-item" onclick="showScreen('settings')">⚙️ Postavke</div>
+          <div class="menu-item" onclick="confirmLogout()">🚪 Odjava</div>
+        </div>
+      </div>
+      <div id="profile-guest" class="guest-box">
+        <p>Nisi prijavljen.</p>
+        <button class="btn-green" onclick="login()">Prijavi se</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-phone" style="display:none;">
+      <header>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span onclick="showScreen('profile')" style="cursor:pointer;font-size:22px;">←</span>
+          <div class="logo-small">Broj telefona</div>
+        </div>
+      </header>
+      <div class="form">
+        <label>Novi broj telefona</label>
+        <input type="text" id="new-phone" placeholder="065/123-456">
+        <button class="btn-green" onclick="savePhone()">Sačuvaj</button>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-settings" style="display:none;">
+      <header>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span onclick="showScreen('profile')" style="cursor:pointer;font-size:22px;">←</span>
+          <div class="logo-small">Postavke</div>
+        </div>
+      </header>
+      <div class="menu-list">
+        <div class="menu-item">Jezik: <b>Bosanski</b></div>
+        <div class="menu-item" onclick="toggleTheme()">Tema: <b id="theme-label">Svijetla</b></div>
+        <div class="menu-item" onclick="toggleNotif()">Obavijesti: <b id="notif-label">Uključene</b></div>
+        <div class="menu-item" onclick="toggleMsgNotif()">Obavijest za poruke: <b id="msgnotif-label">Uključena</b></div>
+        <div class="menu-item">Lokacija: Bosanska Krupa</div>
+        <div class="menu-item" onclick="showAbout()">O aplikaciji</div>
+        <div class="menu-item" onclick="alert('Zabranjena prodaja alkohola.\nViđeno-kupljeno.')">Pravila korištenja</div>
+      </div>
+    </div>
+
+    <div class="screen" id="screen-categories" style="display:none;">
+      <header><div class="logo-small">Kategorije</div></header>
+      <div class="category-grid" id="category-grid"></div>
+    </div>
+
+    <div class="screen" id="screen-favorites" style="display:none;">
+      <header><div class="logo-small">Omiljeno</div></header>
+      <div class="products" id="favorites-list"></div>
+    </div>
+
+    <div class="screen" id="screen-messages" style="display:none;">
+      <header><div class="logo-small">Poruke</div></header>
+      <div id="chat-list"></div>
+    </div>
+
+    <div class="screen" id="screen-chat" style="display:none;">
+      <header>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span onclick="showScreen('messages')" style="cursor:pointer;font-size:22px;">←</span>
+          <div class="logo-small" id="chat-title">Razgovor</div>
+        </div>
+      </header>
+      <div id="chat-messages" class="chat-box"></div>
+      <div class="chat-input">
+        <input type="text" id="chat-text" placeholder="Napiši poruku..." onkeypress="if(event.key==='Enter')sendMessage()">
+        <button onclick="sendMessage()">Pošalji</button>
+      </div>
+    </div>
+
+    <nav class="bottom-nav">
+      <div class="nav-item active" onclick="showScreen('home', this)"><div class="icon">⌂</div><div>Početna</div></div>
+      <div class="nav-item" onclick="showScreen('categories', this)"><div class="icon">▦</div><div>Kategorije</div></div>
+      <div class="nav-item" onclick="showScreen('favorites', this)"><div class="icon">♥</div><div>Omiljeno</div></div>
+      <div class="nav-item" onclick="showScreen('messages', this)"><div class="icon">✉</div><div>Poruke</div></div>
+      <div class="nav-item" onclick="showScreen('profile', this)"><div class="icon">👤</div><div>Profil</div></div>
+    </nav>
+  </div>
+
+  <div id="logout-modal" class="modal">
+    <div class="modal-box">
+      <p>Želiš li se odjaviti?</p>
+      <button class="btn-green" onclick="doLogout()">Odjavi se</button>
+      <button class="btn-green gray" onclick="closeLogout()">Odustani</button>
+    </div>
+  </div>
+
+  <script>
+    var sampleAds = [
+      {id:101, title:"Svježe jagode", price:"4", desc:"Domaće jagode iz vrta, slatke", loc:"Bosanska Krupa", category:"Voće", phone:"065/111-222", images:["https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=400"], views:23, seller:"Amina K.", sold:false, featured:true, distance:"1.8", created:Date.now()-100000},
+      {id:102, title:"Maline", price:"6.5", desc:"Svježe maline", loc:"Cazin", category:"Voće", phone:"061/222-333", images:["https://images.unsplash.com/photo-1577069860067-4c0b0b0b0b0b?w=400"], views:18, seller:"Haris B.", sold:false, featured:false, distance:"11.2", created:Date.now()-150000},
+      {id:103, title:"Jabuke idared", price:"2", desc:"Domaće jabuke", loc:"Bihać", category:"Voće", phone:"062/333-444", images:["https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=400"], views:31, seller:"Fatima S.", sold:false, featured:false, distance:"27.5", created:Date.now()-200000},
+      {id:201, title:"Paradajz", price:"2.5", desc:"Svježi paradajz iz plastenika", loc:"Velika Kladuša", category:"Povrće", phone:"061/999-000", images:["https://images.unsplash.com/photo-1546470427-e26264be0b0d?w=400"], views:15, seller:"Lejla M.", sold:false, featured:false, distance:"18.6", created:Date.now()-400000},
+      {id:202, title:"Krompir", price:"1.2", desc:"Domaći krompir", loc:"Bosanska Krupa", category:"Povrće", phone:"065/444-555", images:["https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400"], views:22, seller:"Edin H.", sold:false, featured:false, distance:"2.1", created:Date.now()-80000},
+      {id:203, title:"Luk", price:"1.8", desc:"Svježi luk", loc:"Sanski Most", category:"Povrće", phone:"061/555-666", images:["https://images.unsplash.com/photo-1518977956812-cd3dbadaaf31?w=400"], views:9, seller:"Amela R.", sold:false, featured:false, distance:"22.3", created:Date.now()-500000},
+      {id:301, title:"Domaći kozji sir", price:"12", desc:"Svježi kozji sir", loc:"Cazin", category:"Mlijeko", phone:"061/333-444", images:["https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=400"], views:41, seller:"Haris B.", sold:false, featured:true, distance:"12.4", created:Date.now()-200000},
+      {id:302, title:"Kravlje mlijeko", price:"2", desc:"Svježe mlijeko", loc:"Bosanska Krupa", category:"Mlijeko", phone:"065/666-777", images:["https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400"], views:28, seller:"Selma P.", sold:false, featured:false, distance:"3.5", created:Date.now()-120000},
+      {id:303, title:"Kiselo mlijeko", price:"1.5", desc:"Domaće kiselo mlijeko", loc:"Bužim", category:"Mlijeko", phone:"062/777-888", images:["https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400"], views:14, seller:"Jasmin K.", sold:false, featured:false, distance:"15.8", created:Date.now()-300000},
+      {id:401, title:"Domaća piletina", price:"8", desc:"Svježa piletina", loc:"Bosanska Krupa", category:"Meso", phone:"065/888-999", images:["https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400"], views:36, seller:"Adnan M.", sold:false, featured:false, distance:"1.2", created:Date.now()-90000},
+      {id:402, title:"Juneće meso", price:"14", desc:"Domaće juneće", loc:"Bihać", category:"Meso", phone:"061/111-333", images:["https://images.unsplash.com/photo-1603048297172-c92544798d3a?w=400"], views:19, seller:"Mirza H.", sold:false, featured:true, distance:"26.9", created:Date.now()-250000},
+      {id:501, title:"Domaća jaja", price:"3.5", desc:"Jaja od slobodnih kokoši (10 kom)", loc:"Bosanska Krupa", category:"Jaja", phone:"065/777-888", images:["https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400"], views:19, seller:"Edin H.", sold:false, featured:false, distance:"0.9", created:Date.now()-50000},
+      {id:502, title:"Jaja (30 kom)", price:"9", desc:"Veliko pakovanje", loc:"Cazin", category:"Jaja", phone:"062/222-444", images:["https://images.unsplash.com/photo-1518569656558-1f25e69d93d7?w=400"], views:11, seller:"Amina K.", sold:false, featured:false, distance:"10.7", created:Date.now()-180000},
+      {id:601, title:"Med od bagrema", price:"18", desc:"Čisti bagremov med 1kg", loc:"Bihać", category:"Med", phone:"062/555-666", images:["https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400"], views:67, seller:"Fatima S.", sold:false, featured:true, distance:"28.1", created:Date.now()-300000},
+      {id:602, title:"Livadski med", price:"15", desc:"Prirodni livadski med", loc:"Bosanska Krupa", category:"Med", phone:"065/123-789", images:["https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400"], views:24, seller:"Selma P.", sold:false, featured:false, distance:"4.2", created:Date.now()-70000},
+      {id:603, title:"Med u saću", price:"22", desc:"Med u prirodnom saću", loc:"Velika Kladuša", category:"Med", phone:"061/456-123", images:["https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400"], views:8, seller:"Haris B.", sold:false, featured:false, distance:"19.3", created:Date.now()-600000}
+    ];
+
+    var ads = JSON.parse(localStorage.getItem("ads") || "null") || sampleAds;
+    var favorites = JSON.parse(localStorage.getItem("favorites") || "[]");
+    var chats = JSON.parse(localStorage.getItem("chats") || "{}");
+    var phone = localStorage.getItem("phone") || "065/000-000";
+    var loggedIn = localStorage.getItem("loggedIn") === "true";
+    var darkMode = localStorage.getItem("darkMode") === "true";
+    var notifOn = localStorage.getItem("notifOn") !== "false";
+    var msgNotifOn = localStorage.getItem("msgNotifOn") !== "false";
+    var selectedImages = [];
+    var currentChatId = null;
+    var currentCategory = "Sve";
+    var currentImageIndex = 0;
+    var categories = ["Sve","Voće","Povrće","Mlijeko","Meso","Jaja","Med","Ostalo"];
+
+    function save() {
+      localStorage.setItem("ads", JSON.stringify(ads));
+      localStorage.setItem("favorites", JSON.stringify(favorites));
+      localStorage.setItem("chats", JSON.stringify(chats));
+      localStorage.setItem("phone", phone);
+      localStorage.setItem("loggedIn", loggedIn);
+      localStorage.setItem("darkMode", darkMode);
+      localStorage.setItem("notifOn", notifOn);
+      localStorage.setItem("msgNotifOn", msgNotifOn);
+    }
+
+    function applyTheme() {
+      document.body.classList.toggle("dark", darkMode);
+      var l = document.getElementById("theme-label");
+      if (l) l.textContent = darkMode ? "Tamna" : "Svijetla";
+    }
+    function toggleTheme() { darkMode = !darkMode; save(); applyTheme(); }
+    function toggleNotif() { notifOn = !notifOn; save(); var el=document.getElementById("notif-label"); if(el) el.textContent = notifOn ? "Uključene" : "Isključene"; }
+    function toggleMsgNotif() { msgNotifOn = !msgNotifOn; save(); var el=document.getElementById("msgnotif-label"); if(el) el.textContent = msgNotifOn ? "Uključena" : "Isključena"; }
+
+    function updatePhoneDisplay() { var el = document.getElementById("profile-phone"); if (el) el.textContent = "📞 " + phone; }
+    function showPhoneEdit() { document.getElementById("new-phone").value = phone; showScreen("phone"); }
+    function savePhone() {
+      var n = document.getElementById("new-phone").value.trim();
+      if (!n) return alert("Unesi broj");
+      phone = n; save(); updatePhoneDisplay(); alert("Sačuvano"); showScreen("profile");
+    }
+    function login() { loggedIn = true; save(); updateProfileView(); showScreen("profile"); }
+    function confirmLogout() { document.getElementById("logout-modal").style.display = "flex"; }
+    function closeLogout() { document.getElementById("logout-modal").style.display = "none"; }
+    function doLogout() {
+      loggedIn = false; save(); closeLogout(); updateProfileView(); showScreen("home");
+    }
+    function updateProfileView() {
+      document.getElementById("profile-logged").style.display = loggedIn ? "block" : "none";
+      document.getElementById("profile-guest").style.display = loggedIn ? "none" : "block";
+    }
+
+    function showAbout() {
+      alert("Domaće BiH\nVerzija 1.0\n\nLokalna tržnica za domaće proizvode iz Bosne i Hercegovine.\n\nPovezujemo proizvođače i kupce u tvojoj blizini.\nViđeno – kupljeno. Bez posrednika.\n\n• Domaće voće, povrće, mlijeko, meso, jaja, med i ostalo\n• Zabranjena prodaja alkohola");
+    }
+
+    setTimeout(() => {
+      document.getElementById("splash").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      setTimeout(initMap, 200);
+      buildFilters(); buildCategories(); updatePhoneDisplay(); updateProfileView(); applyTheme();
+      var nl = document.getElementById("notif-label"), ml = document.getElementById("msgnotif-label");
+      if (nl) nl.textContent = notifOn ? "Uključene" : "Isključene";
+      if (ml) ml.textContent = msgNotifOn ? "Uključena" : "Isključena";
+      renderAll();
+    }, 400);
+
+    var map;
+    function initMap() {
+      map = L.map("map").setView([44.8833, 16.5333], 11);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
+      L.marker([44.8833, 16.5333]).addTo(map).bindPopup("Bosanska Krupa").openPopup();
+      setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    function buildFilters() {
+      document.getElementById("home-filters").innerHTML = categories.map(c =>
+        `<button class="chip ${c===currentCategory?'active':''}" onclick="setCategory('${c}')">${c}</button>`
+      ).join("");
+    }
+    function buildCategories() {
+      document.getElementById("category-grid").innerHTML = categories.filter(c=>c!=="Sve").map(c =>
+        `<div class="cat-card" onclick="setCategory('${c}'); showScreen('home')">${c}</div>`
+      ).join("");
+    }
+    function setCategory(cat) { currentCategory = cat; buildFilters(); renderAll(); }
+
+    function showScreen(name, el) {
+      if ((name==="add"||name==="myads"||name==="messages"||name==="phone") && !loggedIn) {
+        alert("Moraš biti prijavljen."); showScreen("profile"); return;
+      }
+      document.querySelectorAll(".screen").forEach(s => s.style.display = "none");
+      var s = document.getElementById("screen-"+name);
+      if (s) s.style.display = "block";
+      document.querySelectorAll(".nav-item").forEach(i => i.classList.remove("active"));
+      if (el) el.classList.add("active");
+      if (name==="home" && map) setTimeout(()=>map.invalidateSize(), 150);
+      if (name==="favorites") renderFavorites();
+      if (name==="messages") renderChatList();
+      if (name==="profile") { updateProfileView(); updatePhoneDisplay(); }
+      if (name==="myads") updateStats();
+      renderAll();
+    }
+
+    function updateStats() {
+      var v = ads.reduce((s,a)=>s+(a.views||0),0);
+      var a = ads.filter(x=>!x.sold).length;
+      var el = document.getElementById("stats");
+      if (el) el.innerHTML = `Aktivnih: <b>${a}</b> &nbsp;•&nbsp; Pregleda: <b>${v}</b>`;
+    }
+
+    function openAdd() {
+      if (!loggedIn) return;
+      document.getElementById("edit-id").value = "";
+      document.getElementById("add-header").textContent = "Dodaj oglas";
+      document.getElementById("save-btn").textContent = "Objavi oglas";
+      ["ad-title","ad-price","ad-desc","ad-images","ad-phone"].forEach(id => document.getElementById(id).value="");
+      document.getElementById("ad-location").value = "Bosanska Krupa";
+      document.getElementById("image-previews").innerHTML = "";
+      selectedImages = [];
+      showScreen("add");
+    }
+    function openEdit(id) {
+      var ad = ads.find(a=>a.id===id); if (!ad) return;
+      document.getElementById("edit-id").value = id;
+      document.getElementById("add-header").textContent = "Uredi oglas";
+      document.getElementById("save-btn").textContent = "Sačuvaj";
+      document.getElementById("ad-title").value = ad.title;
+      document.getElementById("ad-price").value = ad.price;
+      document.getElementById("ad-desc").value = ad.desc||"";
+      document.getElementById("ad-location").value = ad.loc;
+      document.getElementById("ad-phone").value = ad.phone||"";
+      document.getElementById("ad-category").value = ad.category;
+      selectedImages = [...(ad.images||[])];
+      var box = document.getElementById("image-previews"); box.innerHTML="";
+      selectedImages.forEach(src=>{
+        var img=document.createElement("img"); img.src=src; img.className="thumb"; box.appendChild(img);
+      });
+      showScreen("add");
+    }
+    function previewImages(input) {
+      if (!input.files.length) return;
+      selectedImages=[]; var box=document.getElementById("image-previews"); box.innerHTML="";
+      Array.from(input.files).slice(0,3).forEach(f=>{
+        var r=new FileReader();
+        r.onload=e=>{
+          selectedImages.push(e.target.result);
+          var img=document.createElement("img"); img.src=e.target.result; img.className="thumb"; box.appendChild(img);
+        };
+        r.readAsDataURL(f);
+      });
+    }
+    function saveAd() {
+      if (!loggedIn) return;
+      var title=document.getElementById("ad-title").value.trim();
+      var price=document.getElementById("ad-price").value.trim();
+      var desc=document.getElementById("ad-desc").value.trim();
+      var loc=document.getElementById("ad-location").value.trim();
+      var cat=document.getElementById("ad-category").value;
+      var adPhone=document.getElementById("ad-phone").value.trim()||phone;
+      var editId=document.getElementById("edit-id").value;
+      if (!title||!price) return alert("Unesi naziv i cijenu");
+      var bad=["rakija","vino","pivo","alkohol","vinjak","loza","šljivovica"];
+      if (bad.some(w=>(title+" "+desc).toLowerCase().includes(w))) return alert("Alkohol nije dozvoljen");
+      if (editId) {
+        var ad=ads.find(a=>a.id==editId);
+        if (ad) { Object.assign(ad,{title,price,desc,loc,category:cat,phone:adPhone}); if(selectedImages.length) ad.images=[...selectedImages]; }
+        alert("Ažurirano");
+      } else {
+        if (ads.filter(a=>!a.sold).length>=5) return alert("Max 5 oglasa");
+        ads.push({id:Date.now(),title,price,desc,loc,category:cat,phone:adPhone,images:selectedImages.length?[...selectedImages]:["https://via.placeholder.com/300?text=Slika"],views:1,seller:"Edin Hadžić",sold:false,featured:false,distance:(Math.random()*6+0.3).toFixed(1),created:Date.now()});
+        alert("Objavljeno");
+      }
+      save(); showScreen("myads");
+    }
+    function deleteAd(id){ if(!confirm("Obrisati?"))return; ads=ads.filter(a=>a.id!==id); favorites=favorites.filter(f=>f!==id); delete chats[id]; save(); renderAll(); updateStats(); }
+    function toggleSold(id){ var ad=ads.find(a=>a.id===id); if(ad){ad.sold=!ad.sold; save(); renderAll(); updateStats();} }
+    function toggleFeatured(id){ var ad=ads.find(a=>a.id===id); if(ad){ad.featured=!ad.featured; save(); renderAll();} }
+    function shareAd(id){ var ad=ads.find(a=>a.id===id); if(!ad)return; var t=`${ad.title} - ${ad.price} KM\n${ad.loc}`; if(navigator.share) navigator.share({title:ad.title,text:t}).catch(()=>{}); else navigator.clipboard.writeText(t).then(()=>alert("Kopirano")); }
+
+    function getFiltered() {
+      var q=(document.getElementById("search")?.value||"").toLowerCase();
+      var sort=document.getElementById("sort")?.value||"new";
+      var pf=document.getElementById("price-filter")?.value||"all";
+      var list=ads.filter(a=>{
+        if (a.sold) return false;
+        if (currentCategory!=="Sve" && a.category!==currentCategory) return false;
+        if (q && !a.title.toLowerCase().includes(q) && !(a.desc||"").toLowerCase().includes(q)) return false;
+        var p=parseFloat(a.price)||0;
+        if (pf==="0-5" && p>5) return false;
+        if (pf==="5-15" && (p<5||p>15)) return false;
+        if (pf==="15-30" && (p<15||p>30)) return false;
+        if (pf==="30+" && p<=30) return false;
+        return true;
+      });
+      list.sort((a,b)=>{
+        if (a.featured&&!b.featured) return -1;
+        if (!a.featured&&b.featured) return 1;
+        if (sort==="price-asc") return parseFloat(a.price)-parseFloat(b.price);
+        if (sort==="price-desc") return parseFloat(b.price)-parseFloat(a.price);
+        if (sort==="distance") return parseFloat(a.distance||99)-parseFloat(b.distance||99);
+        return (b.created||b.id)-(a.created||a.id);
+      });
+      return list;
+    }
+
+    function renderAll(){ renderList("home-products",getFiltered(),false); renderList("my-ads-list",ads,true); }
+    function renderList(cid,list,isMine){
+      var el=document.getElementById(cid); if(!el)return;
+      if(!list.length){ el.innerHTML='<p class="empty">Nema rezultata.</p>'; return; }
+      el.innerHTML=list.map(ad=>`
+        <div class="product-card ${ad.featured?'featured':''} ${ad.sold?'sold':''}">
+          <img src="${ad.images[0]}" onclick="openDetail(${ad.id})">
+          <div class="info" onclick="openDetail(${ad.id})">
+            <div class="name">${ad.featured?'⭐ ':''}${ad.title} ${ad.sold?'<span class="sold-tag">PRODANO</span>':''}</div>
+            <div class="price">${ad.price} KM</div>
+            <div class="meta">${ad.loc} • ${ad.distance||'—'} km</div>
+            <div class="views">👁️ ${ad.views}</div>
+          </div>
+          <div class="actions">
+            <div class="heart" onclick="toggleFav(${ad.id});event.stopPropagation();">${favorites.includes(ad.id)?'❤️':'🤍'}</div>
+            ${isMine&&loggedIn?`
+              <span onclick="openEdit(${ad.id});event.stopPropagation();">Uredi</span>
+              <span onclick="toggleFeatured(${ad.id});event.stopPropagation();">${ad.featured?'Skini':'Istakni'}</span>
+              <span onclick="toggleSold(${ad.id});event.stopPropagation();">${ad.sold?'Vrati':'Prodato'}</span>
+              <span class="del" onclick="deleteAd(${ad.id});event.stopPropagation();">Obriši</span>
+            `:`<span onclick="shareAd(${ad.id});event.stopPropagation();">Dijeli</span>`}
+          </div>
+        </div>`).join("");
+    }
+    function toggleFav(id){ if(!loggedIn)return alert("Prijavi se"); favorites=favorites.includes(id)?favorites.filter(f=>f!==id):[...favorites,id]; save(); renderAll(); if(document.getElementById("screen-favorites").style.display!=="none") renderFavorites(); }
+    function renderFavorites(){ renderList("favorites-list",ads.filter(a=>favorites.includes(a.id)&&!a.sold),false); }
+
+    function openDetail(id){
+      var ad=ads.find(a=>a.id===id); if(!ad)return;
+      ad.views=(ad.views||0)+1; save(); currentImageIndex=0; showDetailImages(ad); showScreen("detail");
+    }
+    function showDetailImages(ad){
+      var img=ad.images[currentImageIndex]||ad.images[0];
+      var cp=ad.phone||phone;
+      document.getElementById("detail-content").innerHTML=`
+        <div class="detail">
+          <div class="gallery">
+            <img src="${img}">
+            ${ad.images.length>1?`<button class="nav-btn left" onclick="changeImage(${ad.id},-1)">‹</button><button class="nav-btn right" onclick="changeImage(${ad.id},1)">›</button><div class="counter">${currentImageIndex+1}/${ad.images.length}</div>`:""}
+          </div>
+          <h2>${ad.featured?"⭐ ":""}${ad.title} ${ad.sold?'<span class="sold-tag">PRODANO</span>':''}</h2>
+          <div class="price big">${ad.price} KM</div>
+          <p class="desc">${ad.desc||"Nema opisa"}</p>
+          <p class="meta">📍 ${ad.loc} • ≈ ${ad.distance||"—"} km • ${ad.category}</p>
+          <p>📞 ${cp}</p>
+          <p>Prodavac: ${ad.seller}</p>
+          <p class="views">👁️ ${ad.views} pregleda</p>
+          ${!ad.sold?`
+            <button class="btn-green" onclick="openChat(${ad.id})">Pošalji poruku</button>
+            <button class="btn-green gray" onclick="alert('Poziv: ${cp}')">Pozovi</button>
+            <button class="btn-green outline" onclick="shareAd(${ad.id})">Dijeli</button>
+          `:'<p class="sold-msg">Proizvod je prodat.</p>'}
+        </div>`;
+    }
+    function changeImage(id,dir){ var ad=ads.find(a=>a.id===id); if(!ad||ad.images.length<2)return; currentImageIndex=(currentImageIndex+dir+ad.images.length)%ad.images.length; showDetailImages(ad); }
+
+    function openChat(adId){
+      if(!loggedIn)return alert("Prijavi se");
+      var ad=ads.find(a=>a.id===adId); currentChatId=adId;
+      if(!chats[adId]) chats[adId]=[];
+      document.getElementById("chat-title").textContent=ad?.title||"Razgovor";
+      renderChat(); showScreen("chat");
+    }
+    function renderChat(){
+      var box=document.getElementById("chat-messages");
+      var msgs=chats[currentChatId]||[];
+      box.innerHTML=msgs.map(m=>`<div class="msg ${m.from}"><span>${m.text}</span></div>`).join("")||'<p class="empty">Nema poruka</p>';
+      box.scrollTop=box.scrollHeight;
+    }
+    function sendMessage(){
+      var inp=document.getElementById("chat-text"); var t=inp.value.trim();
+      if(!t||!currentChatId)return;
+      if(!chats[currentChatId]) chats[currentChatId]=[];
+      chats[currentChatId].push({from:"me",text:t}); save(); inp.value=""; renderChat();
+      setTimeout(()=>{ chats[currentChatId].push({from:"seller",text:"Primljeno, javit ću se."}); save(); renderChat(); },500);
+    }
+    function renderChatList(){
+      var el=document.getElementById("chat-list");
+      var ids=Object.keys(chats);
+      if(!ids.length) return el.innerHTML='<p class="empty">Nema razgovora</p>';
+      el.innerHTML=ids.map(id=>{
+        var ad=ads.find(a=>a.id==id); var last=chats[id].slice(-1)[0];
+        return `<div class="menu-item" onclick="openChat(${id})"><b>${ad?.title||"Oglas"}</b><br><small>${last?.text||""}</small></div>`;
+      }).join("");
+    }
+  </script>
+</body>
+</html>
