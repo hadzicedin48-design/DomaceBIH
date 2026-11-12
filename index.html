@@ -44,10 +44,17 @@
           <span id="back-arrow" style="font-size:24px; cursor:pointer; display:none;" onclick="closeSettings()">←</span>
           <div class="logo-small">Profil</div>
         </div>
-        <span id="settings-icon" style="font-size:24px; cursor:pointer; display:none;" onclick="toggleSettings()">⚙️</span>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span id="views-icon" style="font-size:22px; cursor:pointer; display:none; position:relative;" onclick="showProfileViews()">
+            👁️
+            <span id="views-badge" style="display:none; position:absolute; top:-6px; right:-8px; background:#e53935; color:white; border-radius:10px; font-size:10px; min-width:16px; height:16px; line-height:16px; text-align:center;">0</span>
+          </span>
+          <span id="settings-icon" style="font-size:24px; cursor:pointer; display:none;" onclick="toggleSettings()">⚙️</span>
+        </div>
       </header>
       <div id="profile-content"></div>
       <div id="settings-panel" style="display:none;"></div>
+      <div id="views-panel" style="display:none;"></div>
     </div>
 
     <div class="screen" id="screen-add" style="display:none;">
@@ -194,9 +201,10 @@
       renderProfile();
       loadAds();
       listenForUnread();
+      listenForProfileViews();
     }, 1600);
 
-    var map, currentChatWith = null, unsubscribeChat = null, allAds = [], unreadCount = 0, confirmCallback = null;
+    var map, currentChatWith = null, unsubscribeChat = null, allAds = [], unreadCount = 0, confirmCallback = null, profileViews = [];
 
     function initMap() {
       map = L.map("map").setView([43.95, 17.8], 7.2);
@@ -266,6 +274,52 @@
       });
     }
 
+    function listenForProfileViews() {
+      const user = getUser();
+      if (!user) return;
+      db.collection("profileViews").doc(user.name).collection("views").orderBy("time", "desc").onSnapshot(snap => {
+        profileViews = snap.docs.map(doc => doc.data());
+        const badge = document.getElementById("views-badge");
+        const icon = document.getElementById("views-icon");
+        if (user) icon.style.display = "inline";
+        if (profileViews.length > 0) {
+          badge.style.display = "block";
+          badge.textContent = profileViews.length > 9 ? "9+" : profileViews.length;
+        } else {
+          badge.style.display = "none";
+        }
+      });
+    }
+
+    function showProfileViews() {
+      const panel = document.getElementById("views-panel");
+      const settings = document.getElementById("settings-panel");
+      settings.style.display = "none";
+      if (panel.style.display === "block") {
+        panel.style.display = "none";
+        return;
+      }
+      panel.style.display = "block";
+      if (!profileViews.length) {
+        panel.innerHTML = `<div class="menu-list"><div class="menu-item">Nema pregleda</div></div>`;
+        return;
+      }
+      panel.innerHTML = `<div class="menu-list">${profileViews.map(v => `
+        <div class="menu-item" onclick="alert('Profil: ${v.viewer}')">
+          👁️ ${v.viewer} <span style="float:right; color:#999; font-size:12px;">${new Date(v.time?.toDate?.() || v.time).toLocaleDateString()}</span>
+        </div>
+      `).join("")}</div>`;
+    }
+
+    function recordProfileView(profileName) {
+      const user = getUser();
+      if (!user || user.name === profileName) return;
+      db.collection("profileViews").doc(profileName).collection("views").add({
+        viewer: user.name,
+        time: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
     function updateBadge() {
       const badge = document.getElementById("msg-badge");
       if (unreadCount > 0) {
@@ -294,13 +348,16 @@
     function renderProfile() {
       const container = document.getElementById("profile-content");
       const settingsIcon = document.getElementById("settings-icon");
+      const viewsIcon = document.getElementById("views-icon");
       const backArrow = document.getElementById("back-arrow");
       const user = getUser();
       document.getElementById("settings-panel").style.display = "none";
+      document.getElementById("views-panel").style.display = "none";
       backArrow.style.display = "none";
 
       if (!user) {
         settingsIcon.style.display = "none";
+        viewsIcon.style.display = "none";
         container.innerHTML = `
           <div class="profile-box"><div class="avatar">👤</div><h3>Dobrodošli</h3><p>Prijavite se ili registrujte</p></div>
           <div class="menu-list">
@@ -309,6 +366,8 @@
           </div>`;
       } else {
         settingsIcon.style.display = "inline";
+        viewsIcon.style.display = "inline";
+        recordProfileView(user.name); // za test, ukloni kasnije ako želiš
         container.innerHTML = `
           <div class="profile-box">
             <div class="avatar">${user.photo ? `<img src="${user.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : "👤"}</div>
@@ -323,6 +382,8 @@
 
     function toggleSettings() {
       const panel = document.getElementById("settings-panel");
+      const views = document.getElementById("views-panel");
+      views.style.display = "none";
       const user = getUser();
       document.getElementById("back-arrow").style.display = "inline";
       document.getElementById("settings-icon").style.display = "none";
@@ -592,6 +653,7 @@
       closeModal();
       renderProfile();
       listenForUnread();
+      listenForProfileViews();
     }
     function editProfile() {
       const user = getUser();
