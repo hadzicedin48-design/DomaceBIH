@@ -20,6 +20,7 @@
   </div>
 
   <div class="app" id="app" style="display:none;">
+    <!-- POČETNA -->
     <div class="screen" id="screen-home">
       <header><div class="logo-small">DOMAĆE BIH</div></header>
       <div class="search-bar"><input type="text" placeholder="Pretraži proizvode"></div>
@@ -61,21 +62,13 @@
       </div>
     </div>
 
+    <!-- PROFIL -->
     <div class="screen" id="screen-profile" style="display:none;">
       <header><div class="logo-small">Profil</div></header>
-      <div class="profile-box">
-        <div class="avatar">👤</div>
-        <h3>Edin Hadžić</h3>
-        <p>Bosanska Krupa, BiH</p>
-      </div>
-      <div class="menu-list">
-        <div class="menu-item" onclick="alert('Moji oglasi - uskoro')">📋 Moji oglasi</div>
-        <div class="menu-item" onclick="alert('Dodaj oglas - uskoro')">➕ Dodaj oglas</div>
-        <div class="menu-item">⚙️ Postavke</div>
-        <div class="menu-item">🚪 Odjava</div>
-      </div>
+      <div id="profile-content"></div>
     </div>
 
+    <!-- OSTALI EKRANI -->
     <div class="screen" id="screen-categories" style="display:none;">
       <header><div class="logo-small">Kategorije</div></header>
       <p style="padding:20px; text-align:center;">Kategorije - uskoro</p>
@@ -113,6 +106,7 @@
       document.getElementById("splash").style.display = "none";
       document.getElementById("app").style.display = "block";
       setTimeout(initMap, 300);
+      renderProfile();
     }, 1600);
 
     var map;
@@ -140,6 +134,62 @@
       if (name === "home" && map) {
         setTimeout(function() { map.invalidateSize(); }, 200);
       }
+      if (name === "profile") renderProfile();
+    }
+
+    // ===== PROFIL + PRIJAVA =====
+    function getUser() {
+      return JSON.parse(localStorage.getItem("domaceUser") || "null");
+    }
+
+    function renderProfile() {
+      const container = document.getElementById("profile-content");
+      const user = getUser();
+
+      if (!user) {
+        container.innerHTML = `
+          <div class="profile-box">
+            <div class="avatar">👤</div>
+            <h3>Dobrodošli</h3>
+            <p>Prijavite se ili registrujte</p>
+          </div>
+          <div class="menu-list">
+            <div class="menu-item" onclick="showLogin()">🔑 Prijava</div>
+            <div class="menu-item" onclick="showRegister()">📝 Registracija</div>
+          </div>
+        `;
+      } else {
+        container.innerHTML = `
+          <div class="profile-box">
+            <div class="avatar">👤</div>
+            <h3>${user.name}</h3>
+            <p>${user.city || "BiH"}</p>
+          </div>
+          <div class="menu-list">
+            <div class="menu-item" onclick="alert('Moji oglasi - uskoro')">📋 Moji oglasi</div>
+            <div class="menu-item" onclick="alert('Dodaj oglas - uskoro')">➕ Dodaj oglas</div>
+            <div class="menu-item">⚙️ Postavke</div>
+            <div class="menu-item" onclick="logout()">🚪 Odjava</div>
+          </div>
+        `;
+      }
+    }
+
+    function showLogin() {
+      const name = prompt("Unesite ime:");
+      if (!name) return;
+      const city = prompt("Grad:") || "";
+      localStorage.setItem("domaceUser", JSON.stringify({ name, city }));
+      renderProfile();
+    }
+
+    function showRegister() {
+      showLogin(); // za sada isto
+    }
+
+    function logout() {
+      localStorage.removeItem("domaceUser");
+      renderProfile();
     }
   </script>
 </body>
