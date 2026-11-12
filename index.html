@@ -131,8 +131,9 @@
       <div class="nav-item" onclick="showScreen('favorites', this)">
         <div class="icon">♥</div><div>Omiljeno</div>
       </div>
-      <div class="nav-item" onclick="showScreen('messages', this); showMessagesList();">
+      <div class="nav-item" onclick="showScreen('messages', this); showMessagesList();" style="position:relative;">
         <div class="icon">✉</div><div>Poruke</div>
+        <span id="msg-badge" style="display:none; position:absolute; top:2px; right:18px; background:#e53935; color:white; border-radius:10px; font-size:10px; min-width:16px; height:16px; line-height:16px; text-align:center; padding:0 4px;">0</span>
       </div>
       <div class="nav-item" onclick="showScreen('profile', this)">
         <div class="icon">👤</div><div>Profil</div>
@@ -171,9 +172,10 @@
       setTimeout(initMap, 300);
       renderProfile();
       loadAds();
+      listenForUnread();
     }, 1600);
 
-    var map, currentChatWith = null, unsubscribeChat = null, allAds = [];
+    var map, currentChatWith = null, unsubscribeChat = null, allAds = [], unreadCount = 0;
 
     function initMap() {
       map = L.map("map").setView([43.95, 17.8], 7.2);
@@ -192,6 +194,7 @@
       if (name === "profile") renderProfile();
       if (name === "myads") renderMyAds();
       if (name === "notifications") loadNotifSettings();
+      if (name === "messages") markAsRead();
     }
 
     function getUser() { return JSON.parse(localStorage.getItem("domaceUser") || "null"); }
@@ -202,6 +205,47 @@
         allAds = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderHomeProducts();
         if (document.getElementById("screen-myads").style.display === "block") renderMyAds();
+      });
+    }
+
+    function listenForUnread() {
+      const user = getUser();
+      if (!user) return;
+      db.collection("chats").where("participants", "array-contains", user.name).onSnapshot(snap => {
+        let count = 0;
+        snap.forEach(doc => {
+          const data = doc.data();
+          if (data.lastSender && data.lastSender !== user.name && !data.readBy?.includes(user.name)) {
+            count++;
+          }
+        });
+        unreadCount = count;
+        updateBadge();
+      });
+    }
+
+    function updateBadge() {
+      const badge = document.getElementById("msg-badge");
+      if (unreadCount > 0) {
+        badge.style.display = "block";
+        badge.textContent = unreadCount > 9 ? "9+" : unreadCount;
+      } else {
+        badge.style.display = "none";
+      }
+    }
+
+    function markAsRead() {
+      const user = getUser();
+      if (!user) return;
+      db.collection("chats").where("participants", "array-contains", user.name).get().then(snap => {
+        snap.forEach(doc => {
+          const data = doc.data();
+          if (!data.readBy?.includes(user.name)) {
+            doc.ref.update({
+              readBy: firebase.firestore.FieldValue.arrayUnion(user.name)
+            });
+          }
+        });
       });
     }
 
@@ -426,6 +470,8 @@
       chatRef.set({
         participants: [user.name, currentChatWith],
         lastMessage: text,
+        lastSender: user.name,
+        readBy: [user.name],
         updated: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
 
@@ -457,6 +503,7 @@
       saveUser(user);
       closeModal();
       renderProfile();
+      listenForUnread();
     }
     function editProfile() {
       const user = getUser();
