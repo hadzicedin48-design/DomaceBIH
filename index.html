@@ -9,7 +9,6 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
@@ -171,10 +170,10 @@
       document.getElementById("app").style.display = "block";
       setTimeout(initMap, 300);
       renderProfile();
-      renderHomeProducts();
+      loadAds();
     }, 1600);
 
-    var map, currentChatWith = null, unsubscribeChat = null;
+    var map, currentChatWith = null, unsubscribeChat = null, allAds = [];
 
     function initMap() {
       map = L.map("map").setView([43.95, 17.8], 7.2);
@@ -197,8 +196,14 @@
 
     function getUser() { return JSON.parse(localStorage.getItem("domaceUser") || "null"); }
     function saveUser(u) { localStorage.setItem("domaceUser", JSON.stringify(u)); }
-    function getAds() { return JSON.parse(localStorage.getItem("domaceAds") || "[]"); }
-    function saveAds(a) { localStorage.setItem("domaceAds", JSON.stringify(a)); }
+
+    function loadAds() {
+      db.collection("ads").orderBy("created", "desc").onSnapshot(snap => {
+        allAds = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderHomeProducts();
+        if (document.getElementById("screen-myads").style.display === "block") renderMyAds();
+      });
+    }
 
     function renderProfile() {
       const container = document.getElementById("profile-content");
@@ -281,77 +286,80 @@
       const photoInput = document.getElementById("adPhoto");
       const user = getUser();
       if (!user) return alert("Morate biti prijavljeni");
-      const ad = { id: Date.now(), product, price, city, desc, views: 0, owner: user.name, phone: user.phone || "" };
-      if (photoInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = () => {
-          ad.photo = reader.result;
-          const ads = getAds(); ads.push(ad); saveAds(ads);
+
+      const ad = {
+        product, price, city, desc,
+        views: 0,
+        owner: user.name,
+        phone: user.phone || "",
+        created: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      function upload(photo) {
+        if (photo) ad.photo = photo;
+        db.collection("ads").add(ad).then(() => {
           alert("Oglas objavljen!");
           document.getElementById("adForm").reset();
           showScreen("myads");
-          renderHomeProducts();
-        };
+        });
+      }
+
+      if (photoInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = () => upload(reader.result);
         reader.readAsDataURL(photoInput.files[0]);
       } else {
-        const ads = getAds(); ads.push(ad); saveAds(ads);
-        alert("Oglas objavljen!");
-        document.getElementById("adForm").reset();
-        showScreen("myads");
-        renderHomeProducts();
+        upload(null);
       }
     }
 
     function renderMyAds() {
       const list = document.getElementById("my-ads-list");
-      const ads = getAds().filter(a => a.owner === (getUser()?.name));
-      if (!ads.length) { list.innerHTML = "<p style='text-align:center;padding:20px;'>Nemate oglasa</p>"; return; }
-      list.innerHTML = ads.map(ad => `
-        <div class="product-card" onclick="openAd(${ad.id})">
+      const user = getUser();
+      const my = allAds.filter(a => a.owner === user?.name);
+      if (!my.length) { list.innerHTML = "<p style='text-align:center;padding:20px;'>Nemate oglasa</p>"; return; }
+      list.innerHTML = my.map(ad => `
+        <div class="product-card" onclick="openAd('${ad.id}')">
           ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
           <div class="info">
             <div class="name">${ad.product}</div>
             <div class="price">${ad.price}</div>
-            <div class="distance">👁️ ${ad.views} pregleda</div>
+            <div class="distance">👁️ ${ad.views || 0} pregleda</div>
           </div>
         </div>`).join("");
     }
 
     function renderHomeProducts() {
       const container = document.getElementById("home-products");
-      const ads = getAds();
-      if (!ads.length) {
-        container.innerHTML = `<div class="product-card"><img src="https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=400"><div class="info"><div class="name">Jagode (1 kg)</div><div class="price">3,50 KM</div><div class="distance">2.1 km</div></div></div>`;
+      if (!allAds.length) {
+        container.innerHTML = "<p style='text-align:center;padding:20px;'>Nema oglasa</p>";
         return;
       }
-      container.innerHTML = ads.map(ad => `
-        <div class="product-card" onclick="openAd(${ad.id})">
+      container.innerHTML = allAds.map(ad => `
+        <div class="product-card" onclick="openAd('${ad.id}')">
           ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
           <div class="info">
             <div class="name">${ad.product}</div>
             <div class="price">${ad.price}</div>
-            <div class="distance">${ad.city || ""} • 👁️ ${ad.views}</div>
+            <div class="distance">${ad.city || ""} • 👁️ ${ad.views || 0}</div>
           </div>
         </div>`).join("");
     }
 
     function openAd(id) {
-      const ads = getAds();
-      const ad = ads.find(a => a.id === id);
+      const ad = allAds.find(a => a.id === id);
       if (!ad) return;
-      ad.views = (ad.views || 0) + 1;
-      saveAds(ads);
+      db.collection("ads").doc(id).update({ views: firebase.firestore.FieldValue.increment(1) });
       document.getElementById("ad-detail").innerHTML = `
         ${ad.photo ? `<img src="${ad.photo}" style="width:100%; height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">` : ""}
         <h2 style="margin-bottom:6px;">${ad.product}</h2>
         <div class="price" style="font-size:20px; margin-bottom:8px;">${ad.price}</div>
         <p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"}</p>
         <p style="margin-bottom:12px;">${ad.desc || "Nema opisa"}</p>
-        <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views} pregleda • Prodavač: ${ad.owner}</p>
+        <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: ${ad.owner}</p>
         <button class="btn-green" onclick="startChat('${ad.owner}')">💬 Pošalji poruku</button>
       `;
       showScreen("detail");
-      renderHomeProducts();
     }
 
     function showMessagesList() {
