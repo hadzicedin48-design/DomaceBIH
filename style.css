@@ -1,309 +1,162 @@
-<!DOCTYPE html>
-<html lang="bs">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Domaće BiH</title>
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#1a5c2e">
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-</head>
-<body>
-  <div class="splash" id="splash">
-    <img src="logo.png" alt="Logo" class="logo">
-    <h1>DOMAĆE BIH</h1>
-    <p>LOKALNO, SVJEŽE, ZDRAVO</p>
-    <div class="loader"></div>
-    <p class="loading-text">Učitavanje...</p>
-  </div>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, Arial, sans-serif; background: #f4f4f4; color: #222; }
 
-  <div class="app" id="app" style="display:none;">
-    <div class="screen" id="screen-home">
-      <header><div class="logo-small">DOMAĆE BIH</div></header>
-      <div class="search-bar"><input type="text" placeholder="Pretraži proizvode"></div>
-      <div class="filters">
-        <button class="chip active">Sve</button>
-        <button class="chip">Voće</button>
-        <button class="chip">Povrće</button>
-        <button class="chip">Mlijeko</button>
-        <button class="chip">Meso</button>
-        <button class="chip">Jaja</button>
-      </div>
-      <div id="map"></div>
-      <div class="section-title">Najbliži proizvodi</div>
-      <div class="products">
-        <div class="product-card">
-          <img src="https://images.unsplash.com/photo-1464965911861-746a04b4bca6?w=400" alt="">
-          <div class="info">
-            <div class="name">Jagode (1 kg)</div>
-            <div class="price">3,50 KM</div>
-            <div class="distance">2.1 km</div>
-          </div>
-        </div>
-        <div class="product-card">
-          <img src="https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=400" alt="">
-          <div class="info">
-            <div class="name">Sirevi (500 g)</div>
-            <div class="price">6,00 KM</div>
-            <div class="distance">3.4 km</div>
-          </div>
-        </div>
-        <div class="product-card">
-          <img src="https://images.unsplash.com/photo-1558642452-9d2a7deb7f62?w=400" alt="">
-          <div class="info">
-            <div class="name">Med (500 g)</div>
-            <div class="price">8,00 KM</div>
-            <div class="distance">4.2 km</div>
-          </div>
-        </div>
-      </div>
-    </div>
+.splash {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background: #f8f6f0;
+  text-align: center;
+}
+.logo { width: 140px; height: 140px; border-radius: 30px; }
+.splash h1 { color: #1a5c2e; margin: 12px 0 4px; font-size: 26px; }
+.splash p { color: #1a5c2e; letter-spacing: 1px; font-size: 13px; }
+.loader {
+  width: 36px; height: 36px; margin: 28px 0 10px;
+  border: 3px solid #ddd; border-top-color: #1a5c2e;
+  border-radius: 50%; animation: spin 0.9s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { color: #777; font-size: 13px; }
 
-    <div class="screen" id="screen-profile" style="display:none;">
-      <header style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span id="back-arrow" style="font-size:24px; cursor:pointer; display:none;" onclick="closeSettings()">←</span>
-          <div class="logo-small">Profil</div>
-        </div>
-        <span id="settings-icon" style="font-size:24px; cursor:pointer; display:none;" onclick="toggleSettings()">⚙️</span>
-      </header>
-      <div id="profile-content"></div>
-      <div id="settings-panel" style="display:none;"></div>
-    </div>
+.app { min-height: 100vh; padding-bottom: 70px; }
 
-    <div class="screen" id="screen-categories" style="display:none;">
-      <header><div class="logo-small">Kategorije</div></header>
-      <p style="padding:20px; text-align:center;">Kategorije - uskoro</p>
-    </div>
-    <div class="screen" id="screen-favorites" style="display:none;">
-      <header><div class="logo-small">Omiljeno</div></header>
-      <p style="padding:20px; text-align:center;">Omiljeni proizvodi - uskoro</p>
-    </div>
-    <div class="screen" id="screen-messages" style="display:none;">
-      <header><div class="logo-small">Poruke</div></header>
-      <p style="padding:20px; text-align:center;">Poruke - uskoro</p>
-    </div>
+header {
+  background: #1a5c2e;
+  color: white;
+  padding: 14px 16px;
+  font-weight: 600;
+  font-size: 18px;
+}
 
-    <nav class="bottom-nav">
-      <div class="nav-item active" onclick="showScreen('home', this)">
-        <div class="icon">⌂</div><div>Početna</div>
-      </div>
-      <div class="nav-item" onclick="showScreen('categories', this)">
-        <div class="icon">▦</div><div>Kategorije</div>
-      </div>
-      <div class="nav-item" onclick="showScreen('favorites', this)">
-        <div class="icon">♥</div><div>Omiljeno</div>
-      </div>
-      <div class="nav-item" onclick="showScreen('messages', this)">
-        <div class="icon">✉</div><div>Poruke</div>
-      </div>
-      <div class="nav-item" onclick="showScreen('profile', this)">
-        <div class="icon">👤</div><div>Profil</div>
-      </div>
-    </nav>
-  </div>
+.search-bar { background: white; padding: 10px 12px; }
+.search-bar input {
+  width: 100%; padding: 11px 16px; border: 1px solid #e0e0e0;
+  border-radius: 24px; font-size: 15px; outline: none;
+}
 
-  <div class="modal" id="authModal">
-    <div class="modal-content">
-      <span class="close" onclick="closeModal()">&times;</span>
-      <h2 id="modalTitle">Prijava</h2>
-      <form id="authForm" onsubmit="handleAuth(event)">
-        <input type="text" id="inputName" placeholder="Ime i prezime" required>
-        <input type="text" id="inputCity" placeholder="Grad (npr. Bosanska Krupa)">
-        <input type="tel" id="inputPhone" placeholder="Broj telefona">
-        <button type="submit" class="btn-green">Potvrdi</button>
-      </form>
-    </div>
-  </div>
+.filters {
+  display: flex; gap: 8px; padding: 10px 12px;
+  background: white; overflow-x: auto;
+}
+.chip {
+  border: 1px solid #ddd; background: white; color: #333;
+  padding: 6px 14px; border-radius: 20px; font-size: 13px; white-space: nowrap;
+}
+.chip.active { background: #1a5c2e; color: white; border-color: #1a5c2e; }
 
-  <script>
-    setTimeout(function () {
-      document.getElementById("splash").style.display = "none";
-      document.getElementById("app").style.display = "block";
-      setTimeout(initMap, 300);
-      renderProfile();
-    }, 1600);
+#map { height: 260px; background: #e9e9e9; }
 
-    var map;
-    function initMap() {
-      map = L.map("map").setView([43.95, 17.8], 7.2);
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution: "&copy; OpenStreetMap"
-      }).addTo(map);
-      L.marker([44.84, 18.76]).addTo(map).bindPopup("Brčko");
-      L.marker([43.85, 18.41]).addTo(map).bindPopup("Sarajevo");
-      setTimeout(function () { map.invalidateSize(); }, 400);
-    }
+.section-title {
+  padding: 14px 16px 6px;
+  font-weight: 600;
+  font-size: 16px;
+}
 
-    function showScreen(name, el) {
-      document.querySelectorAll(".screen").forEach(s => s.style.display = "none");
-      document.getElementById("screen-" + name).style.display = "block";
-      document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
-      el.classList.add("active");
-      if (name === "home" && map) setTimeout(() => map.invalidateSize(), 200);
-      if (name === "profile") renderProfile();
-    }
+.product-card {
+  display: flex; background: white; margin: 8px 12px;
+  border-radius: 12px; overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+.product-card img { width: 110px; height: 110px; object-fit: cover; }
+.info { padding: 12px; display: flex; flex-direction: column; justify-content: center; }
+.name { font-weight: 600; font-size: 15px; }
+.price { color: #1a5c2e; font-weight: 700; margin: 4px 0; }
+.distance { color: #777; font-size: 13px; }
 
-    function getUser() {
-      return JSON.parse(localStorage.getItem("domaceUser") || "null");
-    }
-    function saveUser(user) {
-      localStorage.setItem("domaceUser", JSON.stringify(user));
-    }
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 62px; background: white;
+  display: flex; border-top: 1px solid #eee;
+  z-index: 999;
+}
+.nav-item {
+  flex: 1; text-align: center; padding-top: 6px;
+  color: #999; font-size: 11px; cursor: pointer;
+}
+.nav-item .icon { font-size: 20px; margin-bottom: 2px; color: #999; }
+.nav-item.active { color: #1a5c2e; }
+.nav-item.active .icon { color: #1a5c2e; }
 
-    function renderProfile() {
-      const container = document.getElementById("profile-content");
-      const settingsIcon = document.getElementById("settings-icon");
-      const backArrow = document.getElementById("back-arrow");
-      const user = getUser();
+.profile-box {
+  text-align: center;
+  padding: 30px 20px;
+  background: white;
+  margin: 12px;
+  border-radius: 12px;
+}
+.avatar { font-size: 48px; margin-bottom: 10px; }
+.menu-list {
+  background: white;
+  margin: 12px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+.menu-item {
+  padding: 16px 18px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 15px;
+  cursor: pointer;
+}
+.menu-item:last-child { border-bottom: none; }
+.menu-item:active { background: #f5f5f5; }
 
-      document.getElementById("settings-panel").style.display = "none";
-      backArrow.style.display = "none";
-
-      if (!user) {
-        settingsIcon.style.display = "none";
-        container.innerHTML = `
-          <div class="profile-box">
-            <div class="avatar">👤</div>
-            <h3>Dobrodošli</h3>
-            <p>Prijavite se ili registrujte</p>
-          </div>
-          <div class="menu-list">
-            <div class="menu-item" onclick="openModal('login')">🔑 Prijava</div>
-            <div class="menu-item" onclick="openModal('register')">📝 Registracija</div>
-          </div>
-        `;
-      } else {
-        settingsIcon.style.display = "inline";
-        container.innerHTML = `
-          <div class="profile-box">
-            <div class="avatar">${user.photo ? `<img src="${user.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : "👤"}</div>
-            <h3>${user.name}</h3>
-            <p>${user.city || "BiH"}</p>
-          </div>
-          <div class="menu-list">
-            <div class="menu-item" onclick="alert('Moji oglasi - uskoro')">📋 Moji oglasi</div>
-            <div class="menu-item" onclick="alert('Dodaj oglas - uskoro')">➕ Dodaj oglas</div>
-          </div>
-        `;
-      }
-    }
-
-    function toggleSettings() {
-      const panel = document.getElementById("settings-panel");
-      const user = getUser();
-      document.getElementById("back-arrow").style.display = "inline";
-      document.getElementById("settings-icon").style.display = "none";
-
-      if (panel.style.display === "block") {
-        closeSettings();
-        return;
-      }
-      panel.style.display = "block";
-      panel.innerHTML = `
-        <div class="menu-list" style="margin-top:0;">
-          <div class="menu-item" onclick="editProfile()">✏️ Uredi profil</div>
-          <div class="menu-item" onclick="getLocation()">📍 Dozvoli lokaciju</div>
-          <div class="menu-item" onclick="changePhoto()">🖼️ Postavi sliku profila</div>
-          <div class="menu-item">
-            🔔 Obavijesti 
-            <input type="checkbox" ${user.notifications ? "checked" : ""} onchange="toggleNotifications(this.checked)" style="float:right;">
-          </div>
-          <div class="menu-item" onclick="shareApp()">📤 Podijeli aplikaciju</div>
-          <div class="menu-item" onclick="logout()">🚪 Odjava</div>
-        </div>
-      `;
-    }
-
-    function closeSettings() {
-      document.getElementById("settings-panel").style.display = "none";
-      document.getElementById("back-arrow").style.display = "none";
-      if (getUser()) document.getElementById("settings-icon").style.display = "inline";
-    }
-
-    function openModal(type) {
-      document.getElementById("modalTitle").textContent = type === "register" ? "Registracija" : "Prijava";
-      document.getElementById("authModal").style.display = "flex";
-    }
-    function closeModal() {
-      document.getElementById("authModal").style.display = "none";
-      document.getElementById("authForm").reset();
-    }
-    function handleAuth(e) {
-      e.preventDefault();
-      const name = document.getElementById("inputName").value.trim();
-      const city = document.getElementById("inputCity").value.trim();
-      const phone = document.getElementById("inputPhone").value.trim();
-      if (!name) return alert("Unesite ime");
-      const user = getUser() || {};
-      user.name = name;
-      user.city = city;
-      user.phone = phone;
-      saveUser(user);
-      closeModal();
-      renderProfile();
-    }
-    function editProfile() {
-      const user = getUser();
-      if (!user) return;
-      document.getElementById("inputName").value = user.name || "";
-      document.getElementById("inputCity").value = user.city || "";
-      document.getElementById("inputPhone").value = user.phone || "";
-      document.getElementById("modalTitle").textContent = "Uredi profil";
-      document.getElementById("authModal").style.display = "flex";
-      closeSettings();
-    }
-    function getLocation() {
-      if (!navigator.geolocation) return alert("Lokacija nije podržana");
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const user = getUser() || {};
-          user.lat = pos.coords.latitude;
-          user.lng = pos.coords.longitude;
-          saveUser(user);
-          alert("Lokacija sačuvana!");
-        },
-        () => alert("Niste dozvolili lokaciju")
-      );
-    }
-    function changePhoto() {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = "image/*";
-      input.onchange = e => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          const user = getUser() || {};
-          user.photo = reader.result;
-          saveUser(user);
-          renderProfile();
-        };
-        reader.readAsDataURL(file);
-      };
-      input.click();
-    }
-    function toggleNotifications(enabled) {
-      const user = getUser() || {};
-      user.notifications = enabled;
-      saveUser(user);
-    }
-    function shareApp() {
-      const url = "https://hadzicedin48-design.github.io/DomaceBIH/";
-      if (navigator.share) {
-        navigator.share({ title: "Domaće BiH", url });
-      } else {
-        navigator.clipboard.writeText(url);
-        alert("Link kopiran!");
-      }
-    }
-    function logout() {
-      localStorage.removeItem("domaceUser");
-      renderProfile();
-    }
-  </script>
-</body>
-</html>
+/* MODAL - ispravljen */
+.modal {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.55);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+}
+.modal-content {
+  background: white;
+  padding: 28px 22px 22px;
+  border-radius: 18px;
+  width: 88%;
+  max-width: 360px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+}
+.modal-content h2 {
+  margin: 0 0 18px;
+  color: #1a5c2e;
+  text-align: center;
+  font-size: 20px;
+}
+.modal-content input {
+  width: 100%;
+  padding: 13px 14px;
+  margin-bottom: 12px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  font-size: 15px;
+  outline: none;
+}
+.modal-content input:focus {
+  border-color: #1a5c2e;
+}
+.btn-green {
+  width: 100%;
+  padding: 14px;
+  background: #1a5c2e;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+.close {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 26px;
+  cursor: pointer;
+  color: #999;
+  line-height: 1;
+}
