@@ -20,7 +20,6 @@
   </div>
 
   <div class="app" id="app" style="display:none;">
-    <!-- POČETNA -->
     <div class="screen" id="screen-home">
       <header><div class="logo-small">DOMAĆE BIH</div></header>
       <div class="search-bar"><input type="text" placeholder="Pretraži proizvode"></div>
@@ -62,13 +61,11 @@
       </div>
     </div>
 
-    <!-- PROFIL -->
     <div class="screen" id="screen-profile" style="display:none;">
       <header><div class="logo-small">Profil</div></header>
       <div id="profile-content"></div>
     </div>
 
-    <!-- OSTALI EKRANI -->
     <div class="screen" id="screen-categories" style="display:none;">
       <header><div class="logo-small">Kategorije</div></header>
       <p style="padding:20px; text-align:center;">Kategorije - uskoro</p>
@@ -101,6 +98,20 @@
     </nav>
   </div>
 
+  <!-- MODAL ZA PRIJAVU / REGISTRACIJU -->
+  <div class="modal" id="authModal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h2 id="modalTitle">Prijava</h2>
+      <form id="authForm" onsubmit="handleAuth(event)">
+        <input type="text" id="inputName" placeholder="Ime i prezime" required>
+        <input type="text" id="inputCity" placeholder="Grad (npr. Bosanska Krupa)">
+        <input type="tel" id="inputPhone" placeholder="Broj telefona">
+        <button type="submit" class="btn-green">Potvrdi</button>
+      </form>
+    </div>
+  </div>
+
   <script>
     setTimeout(function () {
       document.getElementById("splash").style.display = "none";
@@ -121,23 +132,14 @@
     }
 
     function showScreen(name, el) {
-      document.querySelectorAll(".screen").forEach(function(s) {
-        s.style.display = "none";
-      });
+      document.querySelectorAll(".screen").forEach(s => s.style.display = "none");
       document.getElementById("screen-" + name).style.display = "block";
-
-      document.querySelectorAll(".nav-item").forEach(function(item) {
-        item.classList.remove("active");
-      });
+      document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
       el.classList.add("active");
-
-      if (name === "home" && map) {
-        setTimeout(function() { map.invalidateSize(); }, 200);
-      }
+      if (name === "home" && map) setTimeout(() => map.invalidateSize(), 200);
       if (name === "profile") renderProfile();
     }
 
-    // ===== PROFIL + PRIJAVA =====
     function getUser() {
       return JSON.parse(localStorage.getItem("domaceUser") || "null");
     }
@@ -154,8 +156,8 @@
             <p>Prijavite se ili registrujte</p>
           </div>
           <div class="menu-list">
-            <div class="menu-item" onclick="showLogin()">🔑 Prijava</div>
-            <div class="menu-item" onclick="showRegister()">📝 Registracija</div>
+            <div class="menu-item" onclick="openModal('login')">🔑 Prijava</div>
+            <div class="menu-item" onclick="openModal('register')">📝 Registracija</div>
           </div>
         `;
       } else {
@@ -175,16 +177,27 @@
       }
     }
 
-    function showLogin() {
-      const name = prompt("Unesite ime:");
-      if (!name) return;
-      const city = prompt("Grad:") || "";
-      localStorage.setItem("domaceUser", JSON.stringify({ name, city }));
-      renderProfile();
+    function openModal(type) {
+      document.getElementById("modalTitle").textContent = type === "register" ? "Registracija" : "Prijava";
+      document.getElementById("authModal").style.display = "flex";
     }
 
-    function showRegister() {
-      showLogin(); // za sada isto
+    function closeModal() {
+      document.getElementById("authModal").style.display = "none";
+      document.getElementById("authForm").reset();
+    }
+
+    function handleAuth(e) {
+      e.preventDefault();
+      const name = document.getElementById("inputName").value.trim();
+      const city = document.getElementById("inputCity").value.trim();
+      const phone = document.getElementById("inputPhone").value.trim();
+
+      if (!name) return alert("Unesite ime");
+
+      localStorage.setItem("domaceUser", JSON.stringify({ name, city, phone }));
+      closeModal();
+      renderProfile();
     }
 
     function logout() {
