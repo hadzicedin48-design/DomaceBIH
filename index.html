@@ -9,6 +9,9 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="splash" id="splash">
@@ -73,6 +76,29 @@
       <div id="my-ads-list" style="padding:12px;"></div>
     </div>
 
+    <div class="screen" id="screen-detail" style="display:none;">
+      <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
+        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('home', document.querySelector('.nav-item'))">←</span>
+        <div class="logo-small">Detalji oglasa</div>
+      </header>
+      <div id="ad-detail" style="padding:16px;"></div>
+    </div>
+
+    <div class="screen" id="screen-messages" style="display:none;">
+      <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
+        <span style="font-size:24px; cursor:pointer;" onclick="showMessagesList()">←</span>
+        <div class="logo-small" id="chat-title">Poruke</div>
+      </header>
+      <div id="messages-list" style="padding:12px;"></div>
+      <div id="chat-area" style="display:none;">
+        <div id="chat-messages" style="padding:12px; height:calc(100vh - 180px); overflow-y:auto; background:#f9f9f9;"></div>
+        <div style="position:fixed; bottom:62px; left:0; right:0; background:white; padding:8px; display:flex; gap:6px; border-top:1px solid #eee;">
+          <input type="text" id="chat-input" placeholder="Napiši poruku..." style="flex:1; padding:10px; border:1px solid #ddd; border-radius:20px;">
+          <button onclick="sendChatMessage()" style="background:#1a5c2e; color:white; border:none; border-radius:20px; padding:0 16px;">Pošalji</button>
+        </div>
+      </div>
+    </div>
+
     <div class="screen" id="screen-notifications" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
         <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
@@ -95,10 +121,6 @@
       <header><div class="logo-small">Omiljeno</div></header>
       <p style="padding:20px; text-align:center;">Omiljeni proizvodi - uskoro</p>
     </div>
-    <div class="screen" id="screen-messages" style="display:none;">
-      <header><div class="logo-small">Poruke</div></header>
-      <p style="padding:20px; text-align:center;">Poruke - uskoro</p>
-    </div>
 
     <nav class="bottom-nav">
       <div class="nav-item active" onclick="showScreen('home', this)">
@@ -110,7 +132,7 @@
       <div class="nav-item" onclick="showScreen('favorites', this)">
         <div class="icon">♥</div><div>Omiljeno</div>
       </div>
-      <div class="nav-item" onclick="showScreen('messages', this)">
+      <div class="nav-item" onclick="showScreen('messages', this); showMessagesList();">
         <div class="icon">✉</div><div>Poruke</div>
       </div>
       <div class="nav-item" onclick="showScreen('profile', this)">
@@ -133,6 +155,17 @@
   </div>
 
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDgXYpb32iMlAJBeZyLgP6xC8mWfpytsiM",
+      authDomain: "domacebih-99bc3.firebaseapp.com",
+      projectId: "domacebih-99bc3",
+      storageBucket: "domacebih-99bc3.firebasestorage.app",
+      messagingSenderId: "990089586929",
+      appId: "1:990089586929:web:1c643f76a92405a5c8e150"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     setTimeout(function () {
       document.getElementById("splash").style.display = "none";
       document.getElementById("app").style.display = "block";
@@ -141,7 +174,8 @@
       renderHomeProducts();
     }, 1600);
 
-    var map;
+    var map, currentChatWith = null, unsubscribeChat = null;
+
     function initMap() {
       map = L.map("map").setView([43.95, 17.8], 7.2);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -273,7 +307,7 @@
       const ads = getAds().filter(a => a.owner === (getUser()?.name));
       if (!ads.length) { list.innerHTML = "<p style='text-align:center;padding:20px;'>Nemate oglasa</p>"; return; }
       list.innerHTML = ads.map(ad => `
-        <div class="product-card">
+        <div class="product-card" onclick="openAd(${ad.id})">
           ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
           <div class="info">
             <div class="name">${ad.product}</div>
@@ -304,12 +338,96 @@
     function openAd(id) {
       const ads = getAds();
       const ad = ads.find(a => a.id === id);
-      if (ad) {
-        ad.views = (ad.views || 0) + 1;
-        saveAds(ads);
-        alert(`${ad.product}\n${ad.price}\n${ad.desc || ""}\n\nKontakt: ${ad.phone || "Nema broja"}`);
-        renderHomeProducts();
+      if (!ad) return;
+      ad.views = (ad.views || 0) + 1;
+      saveAds(ads);
+      document.getElementById("ad-detail").innerHTML = `
+        ${ad.photo ? `<img src="${ad.photo}" style="width:100%; height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">` : ""}
+        <h2 style="margin-bottom:6px;">${ad.product}</h2>
+        <div class="price" style="font-size:20px; margin-bottom:8px;">${ad.price}</div>
+        <p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"}</p>
+        <p style="margin-bottom:12px;">${ad.desc || "Nema opisa"}</p>
+        <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views} pregleda • Prodavač: ${ad.owner}</p>
+        <button class="btn-green" onclick="startChat('${ad.owner}')">💬 Pošalji poruku</button>
+      `;
+      showScreen("detail");
+      renderHomeProducts();
+    }
+
+    function showMessagesList() {
+      if (unsubscribeChat) unsubscribeChat();
+      document.getElementById("messages-list").style.display = "block";
+      document.getElementById("chat-area").style.display = "none";
+      document.getElementById("chat-title").textContent = "Poruke";
+      const user = getUser();
+      if (!user) {
+        document.getElementById("messages-list").innerHTML = "<p style='text-align:center;padding:30px;'>Prijavite se</p>";
+        return;
       }
+      db.collection("chats").where("participants", "array-contains", user.name).onSnapshot(snap => {
+        const list = document.getElementById("messages-list");
+        if (snap.empty) {
+          list.innerHTML = "<p style='text-align:center; padding:30px; color:#999;'>Nema razgovora</p>";
+          return;
+        }
+        list.innerHTML = snap.docs.map(doc => {
+          const data = doc.data();
+          const other = data.participants.find(p => p !== user.name) || "Nepoznat";
+          return `<div class="menu-item" onclick="startChat('${other}')" style="border-bottom:1px solid #eee;">💬 ${other}</div>`;
+        }).join("");
+      });
+    }
+
+    function startChat(withName) {
+      const user = getUser();
+      if (!user) return alert("Prijavite se");
+      currentChatWith = withName;
+      document.getElementById("chat-title").textContent = withName;
+      document.getElementById("messages-list").style.display = "none";
+      document.getElementById("chat-area").style.display = "block";
+      showScreen("messages");
+
+      const chatId = [user.name, withName].sort().join("_");
+      if (unsubscribeChat) unsubscribeChat();
+      unsubscribeChat = db.collection("chats").doc(chatId).collection("messages")
+        .orderBy("time")
+        .onSnapshot(snap => {
+          const box = document.getElementById("chat-messages");
+          box.innerHTML = snap.docs.map(doc => {
+            const m = doc.data();
+            return `
+              <div style="margin:8px 0; text-align:${m.sender === user.name ? "right" : "left"};">
+                <div style="display:inline-block; background:${m.sender === user.name ? "#1a5c2e" : "#eee"}; color:${m.sender === user.name ? "white" : "black"}; padding:8px 12px; border-radius:12px; max-width:75%;">
+                  ${m.text || ""}
+                </div>
+              </div>`;
+          }).join("") || "<p style='text-align:center; color:#999;'>Nema poruka</p>";
+          box.scrollTop = box.scrollHeight;
+        });
+    }
+
+    function sendChatMessage() {
+      const input = document.getElementById("chat-input");
+      const text = input.value.trim();
+      const user = getUser();
+      if (!text || !currentChatWith || !user) return;
+
+      const chatId = [user.name, currentChatWith].sort().join("_");
+      const chatRef = db.collection("chats").doc(chatId);
+
+      chatRef.set({
+        participants: [user.name, currentChatWith],
+        lastMessage: text,
+        updated: firebase.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+
+      chatRef.collection("messages").add({
+        text,
+        sender: user.name,
+        time: firebase.firestore.FieldValue.serverTimestamp()
+      });
+
+      input.value = "";
     }
 
     function openModal(type) {
