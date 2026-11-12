@@ -53,16 +53,17 @@
     <div class="screen" id="screen-add" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
         <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
-        <div class="logo-small">Dodaj oglas</div>
+        <div class="logo-small" id="add-title">Dodaj oglas</div>
       </header>
       <div style="padding:16px;">
         <form id="adForm" onsubmit="saveAd(event)">
+          <input type="hidden" id="edit-ad-id">
           <input type="text" id="adProduct" placeholder="Proizvod (npr. Domaći med)" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
           <input type="text" id="adPrice" placeholder="Cijena (npr. 8,00 KM)" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
           <input type="text" id="adCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
           <textarea id="adDesc" placeholder="Opis proizvoda" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px; height:100px;"></textarea>
           <input type="file" id="adPhoto" accept="image/*" style="margin-bottom:12px;">
-          <button type="submit" class="btn-green">Objavi oglas</button>
+          <button type="submit" class="btn-green" id="ad-submit-btn">Objavi oglas</button>
         </form>
       </div>
     </div>
@@ -154,6 +155,17 @@
     </div>
   </div>
 
+  <div class="modal" id="confirmModal">
+    <div class="modal-content" style="text-align:center;">
+      <h2 id="confirm-title">Potvrda</h2>
+      <p id="confirm-text" style="margin:16px 0;">Jeste li sigurni?</p>
+      <div style="display:flex; gap:10px;">
+        <button onclick="closeConfirm()" style="flex:1; padding:12px; border:1px solid #ddd; background:white; border-radius:8px;">Odustani</button>
+        <button id="confirm-btn" class="btn-green" style="flex:1;">Obriši</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyDgXYpb32iMlAJBeZyLgP6xC8mWfpytsiM",
@@ -215,9 +227,7 @@
         let count = 0;
         snap.forEach(doc => {
           const data = doc.data();
-          if (data.lastSender && data.lastSender !== user.name && !data.readBy?.includes(user.name)) {
-            count++;
-          }
+          if (data.lastSender && data.lastSender !== user.name && !data.readBy?.includes(user.name)) count++;
         });
         unreadCount = count;
         updateBadge();
@@ -229,9 +239,7 @@
       if (unreadCount > 0) {
         badge.style.display = "block";
         badge.textContent = unreadCount > 9 ? "9+" : unreadCount;
-      } else {
-        badge.style.display = "none";
-      }
+      } else badge.style.display = "none";
     }
 
     function markAsRead() {
@@ -241,9 +249,7 @@
         snap.forEach(doc => {
           const data = doc.data();
           if (!data.readBy?.includes(user.name)) {
-            doc.ref.update({
-              readBy: firebase.firestore.FieldValue.arrayUnion(user.name)
-            });
+            doc.ref.update({ readBy: firebase.firestore.FieldValue.arrayUnion(user.name) });
           }
         });
       });
@@ -294,12 +300,36 @@
           <div class="menu-item" onclick="showScreen('notifications')">🔔 Obavijesti</div>
           <div class="menu-item" onclick="shareApp()">📤 Podijeli aplikaciju</div>
           <div class="menu-item" onclick="logout()">🚪 Odjava</div>
+          <div class="menu-item" onclick="confirmDeleteProfile()" style="color:#e53935;">🗑️ Obriši profil</div>
         </div>`;
     }
     function closeSettings() {
       document.getElementById("settings-panel").style.display = "none";
       document.getElementById("back-arrow").style.display = "none";
       if (getUser()) document.getElementById("settings-icon").style.display = "inline";
+    }
+
+    function confirmDeleteProfile() {
+      document.getElementById("confirm-title").textContent = "Obriši profil";
+      document.getElementById("confirm-text").textContent = "Jeste li sigurni da želite obrisati profil? Svi vaši oglasi će biti obrisani.";
+      document.getElementById("confirm-btn").onclick = deleteProfile;
+      document.getElementById("confirmModal").style.display = "flex";
+    }
+    function closeConfirm() {
+      document.getElementById("confirmModal").style.display = "none";
+    }
+    function deleteProfile() {
+      const user = getUser();
+      if (!user) return;
+      db.collection("ads").where("owner", "==", user.name).get().then(snap => {
+        snap.forEach(doc => doc.ref.delete());
+      }).then(() => {
+        localStorage.removeItem("domaceUser");
+        closeConfirm();
+        closeSettings();
+        showScreen("home", document.querySelector(".nav-item"));
+        alert("Profil obrisan");
+      });
     }
 
     function loadNotifSettings() {
@@ -328,32 +358,40 @@
       const city = document.getElementById("adCity").value.trim();
       const desc = document.getElementById("adDesc").value.trim();
       const photoInput = document.getElementById("adPhoto");
+      const editId = document.getElementById("edit-ad-id").value;
       const user = getUser();
       if (!user) return alert("Morate biti prijavljeni");
 
-      const ad = {
-        product, price, city, desc,
-        views: 0,
-        owner: user.name,
-        phone: user.phone || "",
-        created: firebase.firestore.FieldValue.serverTimestamp()
-      };
+      const ad = { product, price, city, desc, owner: user.name, phone: user.phone || "" };
 
-      function upload(photo) {
+      function finish(photo) {
         if (photo) ad.photo = photo;
-        db.collection("ads").add(ad).then(() => {
-          alert("Oglas objavljen!");
-          document.getElementById("adForm").reset();
-          showScreen("myads");
-        });
+        if (editId) {
+          db.collection("ads").doc(editId).update(ad).then(() => {
+            alert("Oglas ažuriran!");
+            document.getElementById("adForm").reset();
+            document.getElementById("edit-ad-id").value = "";
+            document.getElementById("add-title").textContent = "Dodaj oglas";
+            document.getElementById("ad-submit-btn").textContent = "Objavi oglas";
+            showScreen("myads");
+          });
+        } else {
+          ad.views = 0;
+          ad.created = firebase.firestore.FieldValue.serverTimestamp();
+          db.collection("ads").add(ad).then(() => {
+            alert("Oglas objavljen!");
+            document.getElementById("adForm").reset();
+            showScreen("myads");
+          });
+        }
       }
 
       if (photoInput.files[0]) {
         const reader = new FileReader();
-        reader.onload = () => upload(reader.result);
+        reader.onload = () => finish(reader.result);
         reader.readAsDataURL(photoInput.files[0]);
       } else {
-        upload(null);
+        finish(null);
       }
     }
 
@@ -363,14 +401,44 @@
       const my = allAds.filter(a => a.owner === user?.name);
       if (!my.length) { list.innerHTML = "<p style='text-align:center;padding:20px;'>Nemate oglasa</p>"; return; }
       list.innerHTML = my.map(ad => `
-        <div class="product-card" onclick="openAd('${ad.id}')">
-          ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
-          <div class="info">
+        <div class="product-card">
+          ${ad.photo ? `<img src="${ad.photo}" onclick="openAd('${ad.id}')">` : `<div style="width:100px;height:100px;background:#eee;" onclick="openAd('${ad.id}')"></div>`}
+          <div class="info" onclick="openAd('${ad.id}')">
             <div class="name">${ad.product}</div>
             <div class="price">${ad.price}</div>
             <div class="distance">👁️ ${ad.views || 0} pregleda</div>
           </div>
+          <div style="display:flex; flex-direction:column; gap:6px; padding-right:8px;">
+            <button onclick="editAd('${ad.id}')" style="background:#1a5c2e; color:white; border:none; border-radius:6px; padding:6px 10px; font-size:12px;">Uredi</button>
+            <button onclick="confirmDeleteAd('${ad.id}')" style="background:#e53935; color:white; border:none; border-radius:6px; padding:6px 10px; font-size:12px;">Obriši</button>
+          </div>
         </div>`).join("");
+    }
+
+    function editAd(id) {
+      const ad = allAds.find(a => a.id === id);
+      if (!ad) return;
+      document.getElementById("edit-ad-id").value = id;
+      document.getElementById("adProduct").value = ad.product || "";
+      document.getElementById("adPrice").value = ad.price || "";
+      document.getElementById("adCity").value = ad.city || "";
+      document.getElementById("adDesc").value = ad.desc || "";
+      document.getElementById("add-title").textContent = "Uredi oglas";
+      document.getElementById("ad-submit-btn").textContent = "Sačuvaj izmjene";
+      showScreen("add");
+    }
+
+    function confirmDeleteAd(id) {
+      document.getElementById("confirm-title").textContent = "Obriši oglas";
+      document.getElementById("confirm-text").textContent = "Jeste li sigurni da želite obrisati ovaj oglas?";
+      document.getElementById("confirm-btn").onclick = () => deleteAd(id);
+      document.getElementById("confirmModal").style.display = "flex";
+    }
+    function deleteAd(id) {
+      db.collection("ads").doc(id).delete().then(() => {
+        closeConfirm();
+        alert("Oglas obrisan");
+      });
     }
 
     function renderHomeProducts() {
