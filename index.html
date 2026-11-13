@@ -641,7 +641,7 @@
       if (!user) return alert("Morate biti prijavljeni");
 
       if (containsAlcohol(product + " " + desc)) {
-        alert("Oglas sadrži alkohol i nije dozvoljen.");
+        showConfirm("Nije dozvoljeno", "Oglasi koji sadrže alkohol nisu dozvoljeni u aplikaciji.", () => {});
         return;
       }
 
