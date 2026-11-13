@@ -42,11 +42,11 @@
         <button class="chip" onclick="setCategory('Jaja', this)">Jaja</button>
       </div>
       <div style="padding:8px 12px; background:#fff; display:flex; gap:8px; overflow-x:auto; align-items:center;">
-        <button class="chip" onclick="toggleMap()">🗺️ Mapa</button>
-        <button class="chip" onclick="setSort('newest')">Najnoviji</button>
-        <button class="chip" onclick="setSort('available')">Samo dostupni</button>
+        <button class="chip" id="map-btn" onclick="toggleMap()">🗺️ Mapa</button>
+        <button class="chip active" id="newest-btn" onclick="setSort('newest', this)">Najnoviji</button>
+        <button class="chip" id="available-btn" onclick="setSort('available', this)">Samo dostupni</button>
       </div>
-      <div id="map" style="height:180px; transition:height 0.3s;"></div>
+      <div id="map" style="height:0px; overflow:hidden; transition:height 0.3s;"></div>
       <div class="section-title">Najbliži proizvodi</div>
       <div class="products" id="home-products"></div>
     </div>
@@ -297,10 +297,164 @@
     let galleryIndex = 0;
     let editingAdId = null;
     let screenHistory = ["home"];
-    let mapVisible = true;
+    let mapVisible = false;
     let currentUser = null;
     let confirmationResult = null;
     let pendingUserData = null;
+
+    const CITY_COORDS = {
+      "sarajevo": [43.8563, 18.4131],
+      "banja luka": [44.7722, 17.1910],
+      "tuzla": [44.5384, 18.6671],
+      "mostar": [43.3438, 17.8078],
+      "zenica": [44.2039, 17.9077],
+      "bihać": [44.8169, 15.8708],
+      "bihac": [44.8169, 15.8708],
+      "cazin": [44.9667, 15.9333],
+      "velika kladuša": [45.1833, 15.8000],
+      "velika kladusa": [45.1833, 15.8000],
+      "prijedor": [44.9794, 16.7142],
+      "doboj": [44.7319, 18.0878],
+      "bijeljina": [44.7567, 19.2144],
+      "brčko": [44.8694, 18.8103],
+      "brcko": [44.8694, 18.8103],
+      "trebinje": [42.7119, 18.3436],
+      "livno": [43.8269, 17.0078],
+      "bugojno": [44.0572, 17.4508],
+      "visoko": [43.9889, 18.1781],
+      "goražde": [43.6675, 18.9756],
+      "gorazde": [43.6675, 18.9756],
+      "konjic": [43.6519, 17.9608],
+      "travnik": [44.2264, 17.6658],
+      "jablanica": [43.6603, 17.7614],
+      "čapljina": [43.1142, 17.7019],
+      "capljina": [43.1142, 17.7019],
+      "gradačac": [44.8783, 18.4256],
+      "gradacac": [44.8783, 18.4256],
+      "zavidovići": [44.4458, 18.1497],
+      "zavidovici": [44.4458, 18.1497],
+      "lukavac": [44.5381, 18.5306],
+      "kakanj": [44.1331, 18.1222],
+      "tešanj": [44.6131, 17.9856],
+      "tesanj": [44.6131, 17.9856],
+      "srebrenik": [44.7047, 18.4883],
+      "živinice": [44.4492, 18.6497],
+      "zivinice": [44.4492, 18.6497],
+      "orašje": [45.0333, 18.6933],
+      "orasje": [45.0333, 18.6933],
+      "odžak": [45.0111, 18.3264],
+      "odzak": [45.0111, 18.3264],
+      "šamac": [45.0594, 18.4678],
+      "samac": [45.0594, 18.4678],
+      "modriča": [44.9578, 18.3014],
+      "modrica": [44.9578, 18.3014],
+      "derventa": [44.9781, 17.9103],
+      "brod": [45.1375, 17.9872],
+      "novi travnik": [44.1714, 17.6581],
+      "vitez": [44.1544, 17.7906],
+      "busovača": [44.0972, 17.8781],
+      "busovaca": [44.0972, 17.8781],
+      "fojnica": [43.9581, 17.9028],
+      "kiseljak": [43.9422, 18.0811],
+      "hadžići": [43.8222, 18.2069],
+      "hadzici": [43.8222, 18.2069],
+      "ilidža": [43.8300, 18.3069],
+      "ilidza": [43.8300, 18.3069],
+      "vogošća": [43.9022, 18.3444],
+      "vogosca": [43.9022, 18.3444],
+      "istočno sarajevo": [43.8167, 18.3667],
+      "istocno sarajevo": [43.8167, 18.3667],
+      "pale": [43.8167, 18.5667],
+      "sokolac": [43.9381, 18.8014],
+      "rogoatica": [43.7992, 19.0031],
+      "višegrad": [43.7822, 19.2928],
+      "visegrad": [43.7822, 19.2928],
+      "foča": [43.5064, 18.7783],
+      "foca": [43.5064, 18.7783],
+      "čajniče": [43.5572, 19.0714],
+      "cajnice": [43.5572, 19.0714],
+      "novo gorazde": [43.6917, 18.9917],
+      "ustikolina": [43.5833, 18.7833],
+      "milici": [44.1667, 19.1000],
+      "zvornik": [44.3858, 19.1025],
+      "bratunac": [44.1850, 19.3311],
+      "srebrenica": [44.1075, 19.2969],
+      "vlasenica": [44.1819, 18.9411],
+      "han pijesak": [44.0819, 18.9531],
+      "olovo": [44.1278, 18.5806],
+      "klopje": [44.0833, 18.5000],
+      "breza": [44.0211, 18.2611],
+      "vranjak": [44.0500, 18.2000],
+      "maglaj": [44.5472, 18.1000],
+      "žepče": [44.4264, 18.0375],
+      "zepce": [44.4264, 18.0375],
+      "usora": [44.6833, 18.0167],
+      "teocak": [44.6000, 18.9833],
+      "sapna": [44.5000, 19.0000],
+      "kalesija": [44.4417, 18.8833],
+      "osmace": [44.4500, 18.8000],
+      "banovici": [44.4092, 18.5261],
+      "đurđevik": [44.4000, 18.6500],
+      "durdevik": [44.4000, 18.6500],
+      "živnice": [44.4492, 18.6497],
+      "gračanica": [44.7031, 18.3100],
+      "gracanica": [44.7031, 18.3100],
+      "doboj istok": [44.7333, 18.1833],
+      "doboj jug": [44.7000, 18.0500],
+      "petrovo": [44.6167, 18.3333],
+      "stanari": [44.7500, 17.8333],
+      "teslic": [44.6064, 17.8597],
+      "kneževo": [44.4900, 17.3800],
+      "knezevo": [44.4900, 17.3800],
+      "mrkonjić grad": [44.4167, 17.0833],
+      "mrkonjic grad": [44.4167, 17.0833],
+      "sipovo": [44.2833, 17.0833],
+      "jajce": [44.3419, 17.2700],
+      "donji vakuf": [44.1431, 17.4000],
+      "bugojno": [44.0572, 17.4508],
+      "gornji vakuf": [43.9381, 17.5881],
+      "prozor": [43.8222, 17.6056],
+      "konjic": [43.6519, 17.9608],
+      "jablanica": [43.6603, 17.7614],
+      "mostar": [43.3438, 17.8078],
+      "stolac": [43.0833, 17.9578],
+      "nevesinje": [43.2583, 18.1139],
+      "gacko": [43.1667, 18.5333],
+      "bijeće": [43.1667, 18.1667],
+      "berkovici": [43.1000, 18.1667],
+      "ljubinje": [42.9500, 18.0833],
+      "ravno": [42.8833, 17.9667],
+      "trebinje": [42.7119, 18.3436],
+      "bileća": [42.8750, 18.4292],
+      "bileca": [42.8750, 18.4292],
+      "nevesinje": [43.2583, 18.1139],
+      "kalinovik": [43.5042, 18.4467],
+      "foča": [43.5064, 18.7783],
+      "foca": [43.5064, 18.7783],
+      "čajniče": [43.5572, 19.0714],
+      "cajnice": [43.5572, 19.0714],
+      "rudo": [43.6167, 19.3667],
+      "višegrad": [43.7822, 19.2928],
+      "visegrad": [43.7822, 19.2928],
+      "rogoatica": [43.7992, 19.0031],
+      "sokolac": [43.9381, 18.8014],
+      "pale": [43.8167, 18.5667],
+      "istočna ilidža": [43.8000, 18.3667],
+      "istocna ilidza": [43.8000, 18.3667],
+      "istočno novo sarajevo": [43.8167, 18.3667],
+      "istocno novo sarajevo": [43.8167, 18.3667],
+      "trnovo": [43.6667, 18.4500],
+      "hadžići": [43.8222, 18.2069],
+      "hadzici": [43.8222, 18.2069],
+      "ilidža": [43.8300, 18.3069],
+      "ilidza": [43.8300, 18.3069],
+      "vogošća": [43.9022, 18.3444],
+      "vogosca": [43.9022, 18.3444],
+      "centar": [43.8563, 18.4131],
+      "novi grad": [43.8500, 18.3667],
+      "novo sarajevo": [43.8500, 18.3833],
+      "stari grad": [43.8592, 18.4319]
+    };
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -356,16 +510,33 @@
       showMyLocation();
     }
 
+    function getCityCoords(city) {
+      if (!city) return null;
+      const key = city.toLowerCase().trim();
+      return CITY_COORDS[key] || null;
+    }
+
     function toggleMap() {
       const mapEl = document.getElementById("map");
       mapVisible = !mapVisible;
-      mapEl.style.height = mapVisible ? "180px" : "0px";
-      mapEl.style.overflow = "hidden";
-      setTimeout(() => map && map.invalidateSize(), 350);
+      mapEl.style.height = mapVisible ? "280px" : "0px";
+      const btn = document.getElementById("map-btn");
+      if (mapVisible) {
+        btn.classList.add("active");
+        setTimeout(() => {
+          if (map) map.invalidateSize();
+          updateMapMarkers();
+        }, 350);
+      } else {
+        btn.classList.remove("active");
+      }
     }
 
-    function setSort(sort) {
+    function setSort(sort, el) {
       currentSort = sort;
+      document.getElementById("newest-btn").classList.remove("active");
+      document.getElementById("available-btn").classList.remove("active");
+      if (el) el.classList.add("active");
       renderHomeProducts();
     }
 
@@ -382,7 +553,6 @@
         const lng = pos.coords.longitude;
         if (myMarker) map.removeLayer(myMarker);
         myMarker = L.circleMarker([lat, lng], { radius: 8, color: "#2196F3", fillColor: "#2196F3", fillOpacity: 0.8 }).addTo(map);
-        map.setView([lat, lng], 11);
       });
     }
 
@@ -463,7 +633,7 @@
       db.collection("ads").orderBy("created", "desc").onSnapshot(snap => {
         allAds = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderHomeProducts();
-        updateMapMarkers();
+        if (mapVisible) updateMapMarkers();
         if (document.getElementById("screen-myads").style.display === "block") renderMyAds();
         if (document.getElementById("screen-favorites").style.display === "block") renderFavorites();
       });
@@ -474,9 +644,18 @@
       markers.forEach(m => map.removeLayer(m));
       markers = [];
       allAds.forEach(ad => {
-        if (ad.lat && ad.lng) {
-          const marker = L.marker([ad.lat, ad.lng]).addTo(map)
-            .bindPopup(`<b>${ad.product}</b><br>${ad.price}<br><button onclick="openAd('${ad.id}')">Otvori</button>`);
+        const coords = getCityCoords(ad.city);
+        if (coords) {
+          const iconHtml = ad.photos && ad.photos[0] 
+            ? `<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid #1a5c2e;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><img src="${ad.photos[0]}" style="width:100%;height:100%;object-fit:cover;"></div>`
+            : `<div style="width:40px;height:40px;border-radius:50%;background:#1a5c2e;color:white;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;">📍</div>`;
+          const icon = L.divIcon({
+            html: iconHtml,
+            className: "",
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+          });
+          const marker = L.marker(coords, { icon }).addTo(map);
           marker.on("click", () => openAd(ad.id));
           markers.push(marker);
         }
