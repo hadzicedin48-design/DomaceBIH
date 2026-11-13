@@ -256,7 +256,8 @@
         <input type="password" id="inputPassword" placeholder="Lozinka" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <input type="text" id="inputName" placeholder="Ime i prezime" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <input type="text" id="inputCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-        <input type="tel" id="inputPhone" placeholder="Broj telefona (+387...)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="tel" id="inputPhone" placeholder="Broj telefona (+387, +386...)" style="width:100%; padding:12px; margin-bottom:4px; border:1px solid #ddd; border-radius:8px;">
+        <p style="font-size:12px; color:#777; margin-bottom:10px;">Unesi broj sa pozivnim brojem (npr. +387, +386, +385, +43, +49)</p>
         <div id="recaptcha-container"></div>
         <button type="submit" class="btn-green">Potvrdi</button>
       </form>
@@ -301,6 +302,7 @@
     let currentUser = null;
     let confirmationResult = null;
     let pendingUserData = null;
+    let recaptchaVerifier = null;
 
     const CITY_COORDS = {
       "sarajevo": [43.8563, 18.4131],
@@ -339,121 +341,7 @@
       "tesanj": [44.6131, 17.9856],
       "srebrenik": [44.7047, 18.4883],
       "živinice": [44.4492, 18.6497],
-      "zivinice": [44.4492, 18.6497],
-      "orašje": [45.0333, 18.6933],
-      "orasje": [45.0333, 18.6933],
-      "odžak": [45.0111, 18.3264],
-      "odzak": [45.0111, 18.3264],
-      "šamac": [45.0594, 18.4678],
-      "samac": [45.0594, 18.4678],
-      "modriča": [44.9578, 18.3014],
-      "modrica": [44.9578, 18.3014],
-      "derventa": [44.9781, 17.9103],
-      "brod": [45.1375, 17.9872],
-      "novi travnik": [44.1714, 17.6581],
-      "vitez": [44.1544, 17.7906],
-      "busovača": [44.0972, 17.8781],
-      "busovaca": [44.0972, 17.8781],
-      "fojnica": [43.9581, 17.9028],
-      "kiseljak": [43.9422, 18.0811],
-      "hadžići": [43.8222, 18.2069],
-      "hadzici": [43.8222, 18.2069],
-      "ilidža": [43.8300, 18.3069],
-      "ilidza": [43.8300, 18.3069],
-      "vogošća": [43.9022, 18.3444],
-      "vogosca": [43.9022, 18.3444],
-      "istočno sarajevo": [43.8167, 18.3667],
-      "istocno sarajevo": [43.8167, 18.3667],
-      "pale": [43.8167, 18.5667],
-      "sokolac": [43.9381, 18.8014],
-      "rogoatica": [43.7992, 19.0031],
-      "višegrad": [43.7822, 19.2928],
-      "visegrad": [43.7822, 19.2928],
-      "foča": [43.5064, 18.7783],
-      "foca": [43.5064, 18.7783],
-      "čajniče": [43.5572, 19.0714],
-      "cajnice": [43.5572, 19.0714],
-      "novo gorazde": [43.6917, 18.9917],
-      "ustikolina": [43.5833, 18.7833],
-      "milici": [44.1667, 19.1000],
-      "zvornik": [44.3858, 19.1025],
-      "bratunac": [44.1850, 19.3311],
-      "srebrenica": [44.1075, 19.2969],
-      "vlasenica": [44.1819, 18.9411],
-      "han pijesak": [44.0819, 18.9531],
-      "olovo": [44.1278, 18.5806],
-      "klopje": [44.0833, 18.5000],
-      "breza": [44.0211, 18.2611],
-      "vranjak": [44.0500, 18.2000],
-      "maglaj": [44.5472, 18.1000],
-      "žepče": [44.4264, 18.0375],
-      "zepce": [44.4264, 18.0375],
-      "usora": [44.6833, 18.0167],
-      "teocak": [44.6000, 18.9833],
-      "sapna": [44.5000, 19.0000],
-      "kalesija": [44.4417, 18.8833],
-      "osmace": [44.4500, 18.8000],
-      "banovici": [44.4092, 18.5261],
-      "đurđevik": [44.4000, 18.6500],
-      "durdevik": [44.4000, 18.6500],
-      "živnice": [44.4492, 18.6497],
-      "gračanica": [44.7031, 18.3100],
-      "gracanica": [44.7031, 18.3100],
-      "doboj istok": [44.7333, 18.1833],
-      "doboj jug": [44.7000, 18.0500],
-      "petrovo": [44.6167, 18.3333],
-      "stanari": [44.7500, 17.8333],
-      "teslic": [44.6064, 17.8597],
-      "kneževo": [44.4900, 17.3800],
-      "knezevo": [44.4900, 17.3800],
-      "mrkonjić grad": [44.4167, 17.0833],
-      "mrkonjic grad": [44.4167, 17.0833],
-      "sipovo": [44.2833, 17.0833],
-      "jajce": [44.3419, 17.2700],
-      "donji vakuf": [44.1431, 17.4000],
-      "bugojno": [44.0572, 17.4508],
-      "gornji vakuf": [43.9381, 17.5881],
-      "prozor": [43.8222, 17.6056],
-      "konjic": [43.6519, 17.9608],
-      "jablanica": [43.6603, 17.7614],
-      "mostar": [43.3438, 17.8078],
-      "stolac": [43.0833, 17.9578],
-      "nevesinje": [43.2583, 18.1139],
-      "gacko": [43.1667, 18.5333],
-      "bijeće": [43.1667, 18.1667],
-      "berkovici": [43.1000, 18.1667],
-      "ljubinje": [42.9500, 18.0833],
-      "ravno": [42.8833, 17.9667],
-      "trebinje": [42.7119, 18.3436],
-      "bileća": [42.8750, 18.4292],
-      "bileca": [42.8750, 18.4292],
-      "nevesinje": [43.2583, 18.1139],
-      "kalinovik": [43.5042, 18.4467],
-      "foča": [43.5064, 18.7783],
-      "foca": [43.5064, 18.7783],
-      "čajniče": [43.5572, 19.0714],
-      "cajnice": [43.5572, 19.0714],
-      "rudo": [43.6167, 19.3667],
-      "višegrad": [43.7822, 19.2928],
-      "visegrad": [43.7822, 19.2928],
-      "rogoatica": [43.7992, 19.0031],
-      "sokolac": [43.9381, 18.8014],
-      "pale": [43.8167, 18.5667],
-      "istočna ilidža": [43.8000, 18.3667],
-      "istocna ilidza": [43.8000, 18.3667],
-      "istočno novo sarajevo": [43.8167, 18.3667],
-      "istocno novo sarajevo": [43.8167, 18.3667],
-      "trnovo": [43.6667, 18.4500],
-      "hadžići": [43.8222, 18.2069],
-      "hadzici": [43.8222, 18.2069],
-      "ilidža": [43.8300, 18.3069],
-      "ilidza": [43.8300, 18.3069],
-      "vogošća": [43.9022, 18.3444],
-      "vogosca": [43.9022, 18.3444],
-      "centar": [43.8563, 18.4131],
-      "novi grad": [43.8500, 18.3667],
-      "novo sarajevo": [43.8500, 18.3833],
-      "stari grad": [43.8592, 18.4319]
+      "zivinice": [44.4492, 18.6497]
     };
 
     const REPORT_REASONS = [
@@ -842,7 +730,7 @@
         auth.signOut();
         localStorage.removeItem("domaceUser");
         renderProfile();
-        alert("Profil obrisan");
+        showConfirm("Profil obrisan", "Vaš profil je uspješno obrisan.", () => {});
       });
     }
 
@@ -881,7 +769,7 @@
       const desc = document.getElementById("adDesc").value.trim();
       const photoInput = document.getElementById("adPhotos");
       const user = getUser();
-      if (!user) return alert("Morate biti prijavljeni");
+      if (!user) return showConfirm("Greška", "Morate biti prijavljeni", () => {});
 
       if (containsAlcohol(product + " " + desc)) {
         showConfirm("Nije dozvoljeno", "Oglasi koji sadrže alkohol nisu dozvoljeni u aplikaciji.", () => {});
@@ -891,7 +779,7 @@
       if (!editingAdId) {
         const myCount = allAds.filter(a => a.owner === user.email).length;
         if (myCount >= MAX_FREE_ADS && !isAdmin()) {
-          alert("Dostigli ste limit od " + MAX_FREE_ADS + " oglasa.");
+          showConfirm("Limit", "Dostigli ste limit od " + MAX_FREE_ADS + " oglasa.", () => {});
           return;
         }
       }
@@ -952,7 +840,7 @@
     function confirmDeleteOwnAd(id) {
       showConfirm("Obriši oglas", "Jeste li sigurni da želite obrisati svoj oglas?", () => {
         db.collection("ads").doc(id).delete().then(() => {
-          alert("Oglas obrisan");
+          showConfirm("Obrisano", "Oglas je uspješno obrisan.", () => {});
           showScreen("myads");
         });
       });
@@ -1140,7 +1028,7 @@
         navigator.share({ title: ad.product, text });
       } else {
         navigator.clipboard.writeText(text);
-        alert("Link kopiran!");
+        showConfirm("Kopirano", "Link oglasa je kopiran.", () => {});
       }
     }
 
@@ -1165,7 +1053,7 @@
         time: firebase.firestore.FieldValue.serverTimestamp(),
         status: "new"
       }).then(() => {
-        alert("Prijava poslana. Hvala!");
+        showConfirm("Poslano", "Prijava je uspješno poslana. Hvala!", () => {});
         closeReportModal();
       });
     }
@@ -1213,7 +1101,7 @@
     function banUser(uid) {
       showConfirm("Ban korisnika", "Banovati ovog korisnika?", () => {
         db.collection("users").doc(uid).update({ banned: true }).then(() => {
-          alert("Korisnik banovan");
+          showConfirm("Banovano", "Korisnik je banovan.", () => {});
         });
       });
     }
@@ -1221,7 +1109,7 @@
     function confirmDeleteAd(id) {
       showConfirm("Obriši oglas", "Jeste li sigurni da želite obrisati ovaj oglas?", () => {
         db.collection("ads").doc(id).delete().then(() => {
-          alert("Oglas obrisan");
+          showConfirm("Obrisano", "Oglas je uspješno obrisan.", () => {});
           showScreen("home", document.querySelector(".nav-item"));
         });
       });
@@ -1263,7 +1151,7 @@
 
     function startChat(withEmail) {
       const user = getUser();
-      if (!user) return alert("Prijavite se");
+      if (!user) return showConfirm("Greška", "Prijavite se", () => {});
       currentChatWith = withEmail;
       document.getElementById("chat-title").textContent = withEmail;
       document.getElementById("messages-list").style.display = "none";
@@ -1316,14 +1204,14 @@
     function confirmBlockUser() {
       document.getElementById("chat-menu").style.display = "none";
       showConfirm("Blokiraj", "Blokirati korisnika " + currentChatWith + "?", () => {
-        alert("Korisnik blokiran");
+        showConfirm("Blokirano", "Korisnik je blokiran.", () => {});
       });
     }
 
     function reportUser() {
       document.getElementById("chat-menu").style.display = "none";
       const reason = prompt("Razlog prijave:");
-      if (reason) alert("Prijava poslana. Hvala!");
+      if (reason) showConfirm("Poslano", "Prijava je poslana. Hvala!", () => {});
     }
 
     function sendQuick(text) {
@@ -1332,7 +1220,7 @@
     }
 
     function shareMyLocation() {
-      if (!navigator.geolocation) return alert("Lokacija nije podržana");
+      if (!navigator.geolocation) return showConfirm("Greška", "Lokacija nije podržana", () => {});
       navigator.geolocation.getCurrentPosition(pos => {
         const text = `Moja lokacija: https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`;
         document.getElementById("chat-input").value = text;
@@ -1414,27 +1302,31 @@
       const city = document.getElementById("inputCity").value.trim();
       const phone = document.getElementById("inputPhone").value.trim();
 
-      if (!email || !password) return alert("Unesite email i lozinku");
+      if (!email || !password) return showConfirm("Greška", "Unesite email i lozinku", () => {});
 
       if (isRegisterMode) {
-        if (!phone) return alert("Unesite broj telefona");
+        if (!phone) return showConfirm("Greška", "Unesite broj telefona", () => {});
         pendingUserData = { email, password, name, city, phone };
         sendSmsCode(phone);
       } else {
         auth.signInWithEmailAndPassword(email, password)
           .then(() => closeModal())
-          .catch(err => alert(err.message));
+          .catch(err => showConfirm("Greška", err.message, () => {}));
       }
     }
 
     function sendSmsCode(phone) {
-      const appVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
-      auth.signInWithPhoneNumber(phone, appVerifier)
+      if (recaptchaVerifier) {
+        recaptchaVerifier.clear();
+        recaptchaVerifier = null;
+      }
+      recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
+      auth.signInWithPhoneNumber(phone, recaptchaVerifier)
         .then(result => {
           confirmationResult = result;
           document.getElementById("smsModal").style.display = "flex";
         })
-        .catch(err => alert("Greška: " + err.message));
+        .catch(err => showConfirm("Greška", err.message, () => {}));
     }
 
     function verifySmsCode() {
@@ -1457,9 +1349,9 @@
         .then(() => {
           document.getElementById("smsModal").style.display = "none";
           closeModal();
-          alert("Registracija uspješna!");
+          showConfirm("Uspjeh", "Registracija je uspješna!", () => {});
         })
-        .catch(err => alert("Pogrešan kod ili greška: " + err.message));
+        .catch(err => showConfirm("Greška", "Pogrešan kod ili greška: " + err.message, () => {}));
     }
 
     function editProfile() {
@@ -1477,14 +1369,14 @@
       closeSettings();
     }
     function getLocation() {
-      if (!navigator.geolocation) return alert("Lokacija nije podržana");
+      if (!navigator.geolocation) return showConfirm("Greška", "Lokacija nije podržana", () => {});
       navigator.geolocation.getCurrentPosition(pos => {
         const user = getUser() || {};
         user.lat = pos.coords.latitude; user.lng = pos.coords.longitude;
         saveUser(user); 
-        alert("Lokacija sačuvana!");
+        showConfirm("Sačuvano", "Lokacija je sačuvana!", () => {});
         showMyLocation();
-      }, () => alert("Niste dozvolili lokaciju"));
+      }, () => showConfirm("Greška", "Niste dozvolili lokaciju", () => {}));
     }
     function changePhoto() {
       const input = document.createElement("input");
@@ -1510,7 +1402,7 @@
     function shareApp() {
       const url = "https://hadzicedin48-design.github.io/DomaceBIH/";
       if (navigator.share) navigator.share({ title: "Domaće", url });
-      else { navigator.clipboard.writeText(url); alert("Link kopiran!"); }
+      else { navigator.clipboard.writeText(url); showConfirm("Kopirano", "Link aplikacije je kopiran!", () => {}); }
     }
     function logout() { 
       auth.signOut();
