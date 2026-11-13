@@ -208,9 +208,11 @@
       <span class="close" onclick="closeModal()">&times;</span>
       <h2 id="modalTitle">Prijava</h2>
       <form id="authForm" onsubmit="handleAuth(event)">
-        <input type="text" id="inputName" placeholder="Ime i prezime" required>
-        <input type="text" id="inputCity" placeholder="Grad">
-        <input type="tel" id="inputPhone" placeholder="Broj telefona">
+        <input type="text" id="inputName" placeholder="Ime i prezime" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="text" id="inputCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="tel" id="inputPhone" placeholder="Broj telefona" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="password" id="inputPassword" placeholder="Lozinka" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="password" id="inputPassword2" placeholder="Ponovi lozinku" style="display:none; width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <button type="submit" class="btn-green">Potvrdi</button>
       </form>
     </div>
@@ -231,6 +233,7 @@
     const ADMIN_NAME = "EDIN HADŽIIC";
     let currentCategory = "Sve";
     let reportingAdId = null;
+    let isRegisterMode = false;
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -263,7 +266,7 @@
 
     function isAdmin() {
       const user = getUser();
-      return user && user.name === ADMIN_NAME;
+      return user && user.name === ADMIN_NAME && user.isAdmin === true;
     }
 
     function setCategory(cat, el) {
@@ -845,27 +848,45 @@
     }
 
     function openModal(type) {
-      document.getElementById("modalTitle").textContent = type === "register" ? "Registracija" : "Prijava";
+      isRegisterMode = (type === "register");
+      document.getElementById("modalTitle").textContent = isRegisterMode ? "Registracija" : "Prijava";
+      document.getElementById("inputPassword2").style.display = isRegisterMode ? "block" : "none";
       document.getElementById("authModal").style.display = "flex";
     }
     function closeModal() {
       document.getElementById("authModal").style.display = "none";
       document.getElementById("authForm").reset();
+      isRegisterMode = false;
     }
     function handleAuth(e) {
       e.preventDefault();
       const name = document.getElementById("inputName").value.trim();
       const city = document.getElementById("inputCity").value.trim();
       const phone = document.getElementById("inputPhone").value.trim();
-      if (!name) return alert("Unesite ime");
+      const password = document.getElementById("inputPassword").value;
+      const password2 = document.getElementById("inputPassword2").value;
+
+      if (!name || !password) return alert("Unesite ime i lozinku");
+
+      if (isRegisterMode) {
+        if (password !== password2) return alert("Lozinke se ne poklapaju");
+        if (password.length < 4) return alert("Lozinka mora imati najmanje 4 znaka");
+      }
+
       const user = getUser() || {};
-      user.name = name; user.city = city; user.phone = phone;
+      user.name = name;
+      user.city = city;
+      user.phone = phone;
+      user.password = password; // sprema se lokalno (za sada)
+      user.isAdmin = (name.toUpperCase() === ADMIN_NAME.toUpperCase());
       saveUser(user);
+
       db.collection("users").doc(user.name).set({
         name: user.name,
         city: user.city || "",
         phone: user.phone || ""
       }, { merge: true });
+
       closeModal();
       renderProfile();
       listenForUnread();
@@ -878,6 +899,7 @@
       document.getElementById("inputCity").value = user.city || "";
       document.getElementById("inputPhone").value = user.phone || "";
       document.getElementById("modalTitle").textContent = "Uredi profil";
+      document.getElementById("inputPassword2").style.display = "none";
       document.getElementById("authModal").style.display = "flex";
       closeSettings();
     }
