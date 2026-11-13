@@ -11,6 +11,13 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <style>
+    body.dark { background: #121212 !important; color: #eee !important; }
+    body.dark .screen { background: #1e1e1e; color: #eee; }
+    body.dark .menu-item, body.dark .product-card, body.dark .profile-box { background: #2a2a2a; color: #eee; }
+    body.dark header { background: #0d3d1f; }
+    body.dark .bottom-nav { background: #1e1e1e; }
+  </style>
 </head>
 <body>
   <div class="splash" id="splash">
@@ -41,7 +48,7 @@
     <div class="screen" id="screen-profile" style="display:none;">
       <header style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px;">
         <div style="display:flex; align-items:center; gap:10px;">
-          <span id="back-arrow" style="font-size:24px; cursor:pointer; display:none;" onclick="closeSettings()">←</span>
+          <span id="back-arrow" style="font-size:24px; cursor:pointer; display:none;" onclick="goBack()">←</span>
           <div class="logo-small">Profil</div>
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
@@ -59,7 +66,7 @@
 
     <div class="screen" id="screen-add" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
-        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
         <div class="logo-small" id="add-title">Dodaj oglas</div>
       </header>
       <div style="padding:16px;">
@@ -92,7 +99,7 @@
 
     <div class="screen" id="screen-myads" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
-        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
         <div class="logo-small">Moji oglasi</div>
       </header>
       <div id="my-ads-list" style="padding:12px;"></div>
@@ -100,7 +107,7 @@
 
     <div class="screen" id="screen-detail" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
-        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('home', document.querySelector('.nav-item'))">←</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
         <div class="logo-small">Detalji oglasa</div>
       </header>
       <div id="ad-detail" style="padding:16px;"></div>
@@ -108,7 +115,7 @@
 
     <div class="screen" id="screen-seller" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
-        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('home', document.querySelector('.nav-item'))">←</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
         <div class="logo-small" id="seller-title">Prodavač</div>
       </header>
       <div id="seller-ads" style="padding:12px;"></div>
@@ -148,7 +155,7 @@
 
     <div class="screen" id="screen-notifications" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
-        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
         <div class="logo-small">Obavijesti</div>
       </header>
       <div class="menu-list" style="margin:12px;">
@@ -162,7 +169,7 @@
 
     <div class="screen" id="screen-reports" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
-        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
         <div class="logo-small">Prijave oglasa</div>
       </header>
       <div id="reports-list" style="padding:12px;"></div>
@@ -170,7 +177,7 @@
 
     <div class="screen" id="screen-users" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
-        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
+        <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
         <div class="logo-small">Korisnici</div>
       </header>
       <div id="users-list" style="padding:12px;"></div>
@@ -270,6 +277,7 @@
     let currentGallery = [];
     let galleryIndex = 0;
     let editingAdId = null;
+    let screenHistory = ["home"];
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -338,6 +346,9 @@
       document.getElementById("screen-" + name).style.display = "block";
       document.querySelectorAll(".nav-item").forEach(item => item.classList.remove("active"));
       if (el) el.classList.add("active");
+      if (screenHistory[screenHistory.length - 1] !== name) {
+        screenHistory.push(name);
+      }
       if (name === "home" && map) setTimeout(() => map.invalidateSize(), 200);
       if (name === "profile") renderProfile();
       if (name === "myads") renderMyAds();
@@ -347,6 +358,16 @@
       if (name === "reports") loadReports();
       if (name === "users") loadUsers();
       document.getElementById("chat-menu").style.display = "none";
+    }
+
+    function goBack() {
+      if (screenHistory.length > 1) {
+        screenHistory.pop();
+        const prev = screenHistory[screenHistory.length - 1];
+        showScreen(prev);
+      } else {
+        showScreen("home", document.querySelector(".nav-item"));
+      }
     }
 
     function getUser() { return JSON.parse(localStorage.getItem("domaceUser") || "null"); }
@@ -512,6 +533,13 @@
         const myAds = allAds.filter(a => a.owner === user.name);
         const totalViews = myAds.reduce((sum, a) => sum + (a.views || 0), 0);
         const totalFavs = myAds.reduce((sum, a) => sum + (getFavorites().filter(f => f === a.id).length), 0);
+        let adminItems = "";
+        if (isAdmin()) {
+          adminItems = `
+            <div class="menu-item" onclick="showScreen('reports')">⚠️ Prijave oglasa</div>
+            <div class="menu-item" onclick="showScreen('users')">👥 Korisnici</div>
+          `;
+        }
         container.innerHTML = `
           <div class="profile-box">
             <div class="avatar">${user.photo ? `<img src="${user.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : "👤"}</div>
@@ -521,6 +549,7 @@
           <div class="menu-list">
             <div class="menu-item" onclick="showScreen('myads')">📋 Moji oglasi</div>
             <div class="menu-item" onclick="showScreen('add')">➕ Dodaj oglas</div>
+            ${adminItems}
           </div>`;
       }
     }
@@ -534,13 +563,6 @@
       document.getElementById("settings-icon").style.display = "none";
       if (panel.style.display === "block") { closeSettings(); return; }
       panel.style.display = "block";
-      let adminItems = "";
-      if (isAdmin()) {
-        adminItems = `
-          <div class="menu-item" onclick="showScreen('reports')">⚠️ Prijave oglasa</div>
-          <div class="menu-item" onclick="showScreen('users')">👥 Korisnici</div>
-        `;
-      }
       panel.innerHTML = `
         <div class="menu-list" style="margin-top:0;">
           <div class="menu-item" onclick="editProfile()">✏️ Uredi profil</div>
@@ -549,7 +571,6 @@
           <div class="menu-item" onclick="showScreen('notifications')">🔔 Obavijesti</div>
           <div class="menu-item" onclick="toggleTheme()">🌙 Tamni režim</div>
           <div class="menu-item" onclick="shareApp()">📤 Podijeli aplikaciju</div>
-          ${adminItems}
           <div class="menu-item" onclick="confirmDeleteProfile()">🗑️ Obriši profil</div>
           <div class="menu-item" onclick="logout()">🚪 Odjava</div>
         </div>`;
@@ -568,8 +589,11 @@
     }
     function applyTheme() {
       const theme = localStorage.getItem("domaceTheme") || "light";
-      document.body.style.background = theme === "dark" ? "#121212" : "#f5f5f5";
-      document.body.style.color = theme === "dark" ? "#eee" : "#333";
+      if (theme === "dark") {
+        document.body.classList.add("dark");
+      } else {
+        document.body.classList.remove("dark");
+      }
     }
 
     function confirmDeleteProfile() {
