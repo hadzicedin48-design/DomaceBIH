@@ -65,7 +65,14 @@
       <div style="padding:16px;">
         <form id="adForm" onsubmit="saveAd(event)">
           <input type="text" id="adProduct" placeholder="Proizvod (npr. Domaći med)" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-          <input type="text" id="adPrice" placeholder="Cijena (npr. 8,00 KM)" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+          <div style="display:flex; gap:8px; margin-bottom:10px;">
+            <input type="text" id="adPrice" placeholder="Cijena" required style="flex:1; padding:12px; border:1px solid #ddd; border-radius:8px;">
+            <select id="adUnit" style="width:100px; padding:12px; border:1px solid #ddd; border-radius:8px;">
+              <option value="kg">kg</option>
+              <option value="l">litar</option>
+              <option value="kom">komad</option>
+            </select>
+          </div>
           <input type="text" id="adCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
           <select id="adCategory" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
             <option value="">Kategorija</option>
@@ -77,7 +84,7 @@
             <option>Ostalo</option>
           </select>
           <textarea id="adDesc" placeholder="Opis proizvoda" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px; height:100px;"></textarea>
-          <input type="file" id="adPhoto" accept="image/*" style="margin-bottom:12px;">
+          <input type="file" id="adPhotos" accept="image/*" multiple style="margin-bottom:12px;">
           <button type="submit" class="btn-green">Objavi oglas</button>
         </form>
       </div>
@@ -260,6 +267,8 @@
     let isRegisterMode = false;
     let markers = [];
     let myMarker = null;
+    let currentGallery = [];
+    let galleryIndex = 0;
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -308,6 +317,12 @@
     function isAdmin() {
       const user = getUser();
       return user && user.name === ADMIN_NAME && user.isAdmin === true;
+    }
+
+    function isNew(ad) {
+      if (!ad.created) return false;
+      const time = ad.created.toDate ? ad.created.toDate() : new Date(ad.created);
+      return (Date.now() - time.getTime()) < 24 * 60 * 60 * 1000;
     }
 
     function setCategory(cat, el) {
@@ -592,10 +607,11 @@
       e.preventDefault();
       const product = document.getElementById("adProduct").value.trim();
       const price = document.getElementById("adPrice").value.trim();
+      const unit = document.getElementById("adUnit").value;
       const city = document.getElementById("adCity").value.trim();
       const category = document.getElementById("adCategory").value;
       const desc = document.getElementById("adDesc").value.trim();
-      const photoInput = document.getElementById("adPhoto");
+      const photoInput = document.getElementById("adPhotos");
       const user = getUser();
       if (!user) return alert("Morate biti prijavljeni");
 
@@ -611,7 +627,7 @@
       }
 
       const ad = {
-        product, price, city, desc, category,
+        product, price, unit, city, desc, category,
         views: 0,
         status: "Dostupno",
         owner: user.name,
@@ -619,8 +635,8 @@
         created: firebase.firestore.FieldValue.serverTimestamp()
       };
 
-      function upload(photo) {
-        if (photo) ad.photo = photo;
+      function upload(photos) {
+        if (photos.length) ad.photos = photos;
         db.collection("ads").add(ad).then(() => {
           alert("Oglas objavljen!");
           document.getElementById("adForm").reset();
@@ -628,12 +644,15 @@
         });
       }
 
-      if (photoInput.files[0]) {
-        const reader = new FileReader();
-        reader.onload = () => upload(reader.result);
-        reader.readAsDataURL(photoInput.files[0]);
+      if (photoInput.files.length) {
+        const promises = Array.from(photoInput.files).map(file => new Promise(resolve => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.readAsDataURL(file);
+        }));
+        Promise.all(promises).then(upload);
       } else {
-        upload(null);
+        upload([]);
       }
     }
 
@@ -644,10 +663,10 @@
       if (!my.length) { list.innerHTML = "<p style='text-align:center;padding:20px;'>Nemate oglasa</p>"; return; }
       list.innerHTML = my.map(ad => `
         <div class="product-card" onclick="openAd('${ad.id}')">
-          ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
+          ${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
           <div class="info">
-            <div class="name">${ad.product}</div>
-            <div class="price">${ad.price}</div>
+            <div class="name">${ad.product} ${isNew(ad) ? '<span style="background:#e53935;color:white;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:6px;">NOVI</span>' : ''}</div>
+            <div class="price">${ad.price} / ${ad.unit || 'kg'}</div>
             <div class="distance">👁️ ${ad.views || 0} • ♥ ${getFavorites().filter(f => f === ad.id).length} • ${ad.status || "Dostupno"}</div>
           </div>
         </div>`).join("");
@@ -672,10 +691,10 @@
       }
       container.innerHTML = filtered.map(ad => `
         <div class="product-card" onclick="openAd('${ad.id}')">
-          ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
+          ${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
           <div class="info">
-            <div class="name">${ad.product}</div>
-            <div class="price">${ad.price}</div>
+            <div class="name">${ad.product} ${isNew(ad) ? '<span style="background:#e53935;color:white;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:6px;">NOVI</span>' : ''}</div>
+            <div class="price">${ad.price} / ${ad.unit || 'kg'}</div>
             <div class="distance">${ad.city || ""} • 👁️ ${ad.views || 0}</div>
           </div>
         </div>`).join("");
@@ -691,10 +710,10 @@
       }
       container.innerHTML = favAds.map(ad => `
         <div class="product-card" onclick="openAd('${ad.id}')">
-          ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
+          ${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
           <div class="info">
             <div class="name">${ad.product}</div>
-            <div class="price">${ad.price}</div>
+            <div class="price">${ad.price} / ${ad.unit || 'kg'}</div>
             <div class="distance">${ad.city || ""}</div>
           </div>
         </div>`).join("");
@@ -719,6 +738,8 @@
       const favs = getFavorites();
       const isFav = favs.includes(id);
       const user = getUser();
+      currentGallery = ad.photos || [];
+      galleryIndex = 0;
       let adminBtn = "";
       if (isAdmin()) {
         adminBtn = `<button onclick="confirmDeleteAd('${id}')" style="background:#e53935; color:white; border:none; padding:10px 16px; border-radius:8px; margin-top:10px; width:100%;">🗑️ Obriši oglas (Admin)</button>`;
@@ -728,9 +749,17 @@
         statusBtn = `<button onclick="toggleAdStatus('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">${ad.status === "Prodano" ? "✅ Označi kao dostupno" : "📦 Označi kao prodano"}</button>`;
       }
       document.getElementById("ad-detail").innerHTML = `
-        ${ad.photo ? `<img src="${ad.photo}" style="width:100%; height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">` : ""}
-        <h2 style="margin-bottom:6px;">${ad.product}</h2>
-        <div class="price" style="font-size:20px; margin-bottom:8px;">${ad.price}</div>
+        ${currentGallery.length ? `
+          <div style="position:relative; margin-bottom:12px;">
+            <img id="gallery-img" src="${currentGallery[0]}" style="width:100%; height:220px; object-fit:cover; border-radius:12px;">
+            ${currentGallery.length > 1 ? `
+              <button onclick="prevImg()" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px;">‹</button>
+              <button onclick="nextImg()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px;">›</button>
+            ` : ''}
+          </div>
+        ` : ''}
+        <h2 style="margin-bottom:6px;">${ad.product} ${isNew(ad) ? '<span style="background:#e53935;color:white;font-size:12px;padding:2px 8px;border-radius:10px;">NOVI</span>' : ''}</h2>
+        <div class="price" style="font-size:20px; margin-bottom:8px;">${ad.price} / ${ad.unit || 'kg'}</div>
         <p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"} • ${ad.category || ""}</p>
         <p style="margin-bottom:12px;">${ad.desc || "Nema opisa"}</p>
         <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: <span style="color:#1a5c2e; cursor:pointer;" onclick="openSeller('${ad.owner}')">${ad.owner}</span> • ${ad.status || "Dostupno"}</p>
@@ -746,15 +775,26 @@
       showScreen("detail");
     }
 
+    function prevImg() {
+      if (!currentGallery.length) return;
+      galleryIndex = (galleryIndex - 1 + currentGallery.length) % currentGallery.length;
+      document.getElementById("gallery-img").src = currentGallery[galleryIndex];
+    }
+    function nextImg() {
+      if (!currentGallery.length) return;
+      galleryIndex = (galleryIndex + 1) % currentGallery.length;
+      document.getElementById("gallery-img").src = currentGallery[galleryIndex];
+    }
+
     function openSeller(name) {
       document.getElementById("seller-title").textContent = name;
       const ads = allAds.filter(a => a.owner === name && a.status !== "Prodano");
       document.getElementById("seller-ads").innerHTML = ads.length ? ads.map(ad => `
         <div class="product-card" onclick="openAd('${ad.id}')">
-          ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
+          ${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
           <div class="info">
             <div class="name">${ad.product}</div>
-            <div class="price">${ad.price}</div>
+            <div class="price">${ad.price} / ${ad.unit || 'kg'}</div>
             <div class="distance">${ad.city || ""}</div>
           </div>
         </div>`).join("") : "<p style='text-align:center;padding:20px;'>Nema oglasa</p>";
@@ -771,7 +811,7 @@
     function shareAd(id) {
       const ad = allAds.find(a => a.id === id);
       if (!ad) return;
-      const text = `${ad.product} - ${ad.price}\n${ad.city || ""}\nhttps://hadzicedin48-design.github.io/DomaceBIH/`;
+      const text = `${ad.product} - ${ad.price} / ${ad.unit || 'kg'}\n${ad.city || ""}\nhttps://hadzicedin48-design.github.io/DomaceBIH/`;
       if (navigator.share) {
         navigator.share({ title: ad.product, text });
       } else {
