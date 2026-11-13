@@ -138,6 +138,14 @@
       </div>
     </div>
 
+    <div class="screen" id="screen-reports" style="display:none;">
+      <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
+        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
+        <div class="logo-small">Prijave oglasa</div>
+      </header>
+      <div id="reports-list" style="padding:12px;"></div>
+    </div>
+
     <div class="screen" id="screen-categories" style="display:none;">
       <header><div class="logo-small">Kategorije</div></header>
       <div class="menu-list" style="margin:12px;">
@@ -186,6 +194,15 @@
     </div>
   </div>
 
+  <div class="modal" id="reportModal">
+    <div class="modal-content">
+      <span class="close" onclick="closeReportModal()">&times;</span>
+      <h2>Prijavi oglas</h2>
+      <p style="margin-bottom:12px; color:#555;">Odaberi razlog:</p>
+      <div class="menu-list" id="report-reasons"></div>
+    </div>
+  </div>
+
   <div class="modal" id="authModal">
     <div class="modal-content">
       <span class="close" onclick="closeModal()">&times;</span>
@@ -213,6 +230,16 @@
 
     const ADMIN_NAME = "EDIN HADŽIIC";
     let currentCategory = "Sve";
+    let reportingAdId = null;
+
+    const REPORT_REASONS = [
+      "Nije domaći proizvod",
+      "Sadrži alkohol",
+      "Netočan opis ili cijena",
+      "Neodgovarajuća slika",
+      "Ponavlja se oglas",
+      "Ostalo"
+    ];
 
     setTimeout(function () {
       document.getElementById("splash").style.display = "none";
@@ -257,6 +284,7 @@
       if (name === "notifications") loadNotifSettings();
       if (name === "messages") markAsRead();
       if (name === "favorites") renderFavorites();
+      if (name === "reports") loadReports();
       document.getElementById("chat-menu").style.display = "none";
     }
 
@@ -419,6 +447,7 @@
       document.getElementById("settings-icon").style.display = "none";
       if (panel.style.display === "block") { closeSettings(); return; }
       panel.style.display = "block";
+      let adminItem = isAdmin() ? `<div class="menu-item" onclick="showScreen('reports')">⚠️ Prijave oglasa</div>` : "";
       panel.innerHTML = `
         <div class="menu-list" style="margin-top:0;">
           <div class="menu-item" onclick="editProfile()">✏️ Uredi profil</div>
@@ -426,6 +455,7 @@
           <div class="menu-item" onclick="changePhoto()">🖼️ Postavi sliku profila</div>
           <div class="menu-item" onclick="showScreen('notifications')">🔔 Obavijesti</div>
           <div class="menu-item" onclick="shareApp()">📤 Podijeli aplikaciju</div>
+          ${adminItem}
           <div class="menu-item" onclick="confirmDeleteProfile()">🗑️ Obriši profil</div>
           <div class="menu-item" onclick="logout()">🚪 Odjava</div>
         </div>`;
@@ -595,15 +625,60 @@
           <button class="btn-green" onclick="startChat('${ad.owner}')" style="flex:1;">💬 Pošalji poruku</button>
           <button onclick="toggleFavorite('${id}')" style="padding:12px 16px; background:${isFav ? '#e53935' : '#eee'}; border:none; border-radius:8px; color:${isFav ? 'white' : 'black'};">♥</button>
         </div>
-        <button onclick="reportAd('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">⚠️ Prijavi oglas</button>
+        <button onclick="openReportModal('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">⚠️ Prijavi oglas</button>
         ${adminBtn}
       `;
       showScreen("detail");
     }
 
-    function reportAd(id) {
-      const reason = prompt("Razlog prijave oglasa:");
-      if (reason) alert("Prijava poslana. Hvala!");
+    function openReportModal(id) {
+      reportingAdId = id;
+      document.getElementById("report-reasons").innerHTML = REPORT_REASONS.map(r => `
+        <div class="menu-item" onclick="submitReport('${r}')">${r}</div>
+      `).join("");
+      document.getElementById("reportModal").style.display = "flex";
+    }
+    function closeReportModal() {
+      document.getElementById("reportModal").style.display = "none";
+      reportingAdId = null;
+    }
+    function submitReport(reason) {
+      const user = getUser();
+      if (!user || !reportingAdId) return;
+      db.collection("reports").add({
+        adId: reportingAdId,
+        reason: reason,
+        reporter: user.name,
+        time: firebase.firestore.FieldValue.serverTimestamp(),
+        status: "new"
+      }).then(() => {
+        alert("Prijava poslana. Hvala!");
+        closeReportModal();
+      });
+    }
+
+    function loadReports() {
+      const list = document.getElementById("reports-list");
+      db.collection("reports").orderBy("time", "desc").onSnapshot(snap => {
+        if (snap.empty) {
+          list.innerHTML = "<p style='text-align:center;padding:20px;'>Nema prijava</p>";
+          return;
+        }
+        list.innerHTML = snap.docs.map(doc => {
+          const r = doc.data();
+          const ad = allAds.find(a => a.id === r.adId);
+          return `
+            <div class="menu-item" style="border-bottom:1px solid #eee; padding:12px;">
+              <strong>${ad ? ad.product : "Oglas"}</strong><br>
+              <span style="color:#e53935;">Razlog: ${r.reason}</span><br>
+              <span style="color:#777; font-size:13px;">Prijavio: ${r.reporter}</span>
+              <div style="margin-top:8px;">
+                <button onclick="openAd('${r.adId}')" style="padding:6px 12px; background:#1a5c2e; color:white; border:none; border-radius:6px; margin-right:6px;">Pogledaj</button>
+                <button onclick="confirmDeleteAd('${r.adId}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Obriši</button>
+              </div>
+            </div>`;
+        }).join("");
+      });
     }
 
     function confirmDeleteAd(id) {
