@@ -554,8 +554,26 @@
         list.innerHTML = snap.docs.map(doc => {
           const data = doc.data();
           const other = data.participants.find(p => p !== user.name) || "Nepoznat";
-          return `<div class="menu-item" onclick="startChat('${other}')" style="border-bottom:1px solid #eee;">💬 ${other}</div>`;
+          return `
+            <div class="menu-item" onclick="startChat('${other}')" style="border-bottom:1px solid #eee; display:flex; align-items:center; gap:10px;">
+              <div id="photo-${other.replace(/\s/g,'')}" style="width:40px; height:40px; border-radius:50%; background:#eee; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+                👤
+              </div>
+              <div>💬 ${other}</div>
+            </div>`;
         }).join("");
+
+        snap.docs.forEach(doc => {
+          const other = doc.data().participants.find(p => p !== user.name);
+          if (other) {
+            db.collection("users").doc(other).get().then(uDoc => {
+              if (uDoc.exists && uDoc.data().photo) {
+                const el = document.getElementById("photo-" + other.replace(/\s/g,''));
+                if (el) el.innerHTML = `<img src="${uDoc.data().photo}" style="width:100%; height:100%; object-fit:cover;">`;
+              }
+            });
+          }
+        });
       });
     }
 
@@ -686,6 +704,12 @@
       const user = getUser() || {};
       user.name = name; user.city = city; user.phone = phone;
       saveUser(user);
+      // Spremi osnovne podatke u Firebase
+      db.collection("users").doc(user.name).set({
+        name: user.name,
+        city: user.city || "",
+        phone: user.phone || ""
+      }, { merge: true });
       closeModal();
       renderProfile();
       listenForUnread();
@@ -715,7 +739,17 @@
       input.onchange = e => {
         const file = e.target.files[0]; if (!file) return;
         const reader = new FileReader();
-        reader.onload = () => { const user = getUser() || {}; user.photo = reader.result; saveUser(user); renderProfile(); };
+        reader.onload = () => {
+          const user = getUser() || {};
+          user.photo = reader.result;
+          saveUser(user);
+          db.collection("users").doc(user.name).set({
+            name: user.name,
+            photo: user.photo,
+            city: user.city || ""
+          }, { merge: true });
+          renderProfile();
+        };
         reader.readAsDataURL(file);
       };
       input.click();
