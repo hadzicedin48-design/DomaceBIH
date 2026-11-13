@@ -231,9 +231,11 @@
     const db = firebase.firestore();
 
     const ADMIN_NAME = "EDIN HADŽIIC";
+    const MAX_FREE_ADS = 5;
     let currentCategory = "Sve";
     let reportingAdId = null;
     let isRegisterMode = false;
+    let markers = [];
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -244,6 +246,8 @@
       "Ostalo"
     ];
 
+    const ALCOHOL_WORDS = ["alkohol", "pivo", "vino", "rakija", "viski", "žestoko", "beer", "wine"];
+
     setTimeout(function () {
       document.getElementById("splash").style.display = "none";
       document.getElementById("app").style.display = "block";
@@ -252,6 +256,7 @@
       loadAds();
       listenForUnread();
       listenForProfileViews();
+      applyTheme();
     }, 1600);
 
     var map, currentChatWith = null, unsubscribeChat = null, allAds = [], unreadCount = 0, confirmCallback = null, profileViews = [];
@@ -315,8 +320,22 @@
       db.collection("ads").orderBy("created", "desc").onSnapshot(snap => {
         allAds = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderHomeProducts();
+        updateMapMarkers();
         if (document.getElementById("screen-myads").style.display === "block") renderMyAds();
         if (document.getElementById("screen-favorites").style.display === "block") renderFavorites();
+      });
+    }
+
+    function updateMapMarkers() {
+      if (!map) return;
+      markers.forEach(m => map.removeLayer(m));
+      markers = [];
+      allAds.forEach(ad => {
+        if (ad.lat && ad.lng) {
+          const marker = L.marker([ad.lat, ad.lng]).addTo(map)
+            .bindPopup(`<b>${ad.product}</b><br>${ad.price}`);
+          markers.push(marker);
+        }
       });
     }
 
@@ -429,10 +448,13 @@
       } else {
         settingsIcon.style.display = "inline";
         viewsIcon.style.display = "inline";
+        const myAds = allAds.filter(a => a.owner === user.name);
+        const totalViews = myAds.reduce((sum, a) => sum + (a.views || 0), 0);
         container.innerHTML = `
           <div class="profile-box">
             <div class="avatar">${user.photo ? `<img src="${user.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : "👤"}</div>
             <h3>${user.name}</h3><p>${user.city || "BiH"}</p>
+            <p style="font-size:13px; color:#777; margin-top:6px;">Oglasa: ${myAds.length} • Pregleda: ${totalViews}</p>
           </div>
           <div class="menu-list">
             <div class="menu-item" onclick="showScreen('myads')">📋 Moji oglasi</div>
@@ -457,6 +479,7 @@
           <div class="menu-item" onclick="getLocation()">📍 Dozvoli lokaciju</div>
           <div class="menu-item" onclick="changePhoto()">🖼️ Postavi sliku profila</div>
           <div class="menu-item" onclick="showScreen('notifications')">🔔 Obavijesti</div>
+          <div class="menu-item" onclick="toggleTheme()">🌙 Tamni režim</div>
           <div class="menu-item" onclick="shareApp()">📤 Podijeli aplikaciju</div>
           ${adminItem}
           <div class="menu-item" onclick="confirmDeleteProfile()">🗑️ Obriši profil</div>
@@ -467,6 +490,18 @@
       document.getElementById("settings-panel").style.display = "none";
       document.getElementById("back-arrow").style.display = "none";
       if (getUser()) document.getElementById("settings-icon").style.display = "inline";
+    }
+
+    function toggleTheme() {
+      const current = localStorage.getItem("domaceTheme") || "light";
+      const next = current === "light" ? "dark" : "light";
+      localStorage.setItem("domaceTheme", next);
+      applyTheme();
+    }
+    function applyTheme() {
+      const theme = localStorage.getItem("domaceTheme") || "light";
+      document.body.style.background = theme === "dark" ? "#121212" : "#f5f5f5";
+      document.body.style.color = theme === "dark" ? "#eee" : "#333";
     }
 
     function confirmDeleteProfile() {
@@ -496,6 +531,11 @@
       localStorage.setItem("domaceNotifs", JSON.stringify(s));
     }
 
+    function containsAlcohol(text) {
+      const lower = text.toLowerCase();
+      return ALCOHOL_WORDS.some(w => lower.includes(w));
+    }
+
     function saveAd(e) {
       e.preventDefault();
       const product = document.getElementById("adProduct").value.trim();
@@ -507,9 +547,21 @@
       const user = getUser();
       if (!user) return alert("Morate biti prijavljeni");
 
+      if (containsAlcohol(product + " " + desc)) {
+        alert("Oglas sadrži alkohol i nije dozvoljen.");
+        return;
+      }
+
+      const myCount = allAds.filter(a => a.owner === user.name).length;
+      if (myCount >= MAX_FREE_ADS && !isAdmin()) {
+        alert("Dostigli ste limit od " + MAX_FREE_ADS + " oglasa.");
+        return;
+      }
+
       const ad = {
         product, price, city, desc, category,
         views: 0,
+        status: "Dostupno",
         owner: user.name,
         phone: user.phone || "",
         created: firebase.firestore.FieldValue.serverTimestamp()
@@ -544,7 +596,7 @@
           <div class="info">
             <div class="name">${ad.product}</div>
             <div class="price">${ad.price}</div>
-            <div class="distance">👁️ ${ad.views || 0} pregleda</div>
+            <div class="distance">👁️ ${ad.views || 0} • ${ad.status || "Dostupno"}</div>
           </div>
         </div>`).join("");
     }
@@ -552,7 +604,7 @@
     function renderHomeProducts() {
       const container = document.getElementById("home-products");
       const search = (document.getElementById("search-input")?.value || "").toLowerCase();
-      let filtered = allAds;
+      let filtered = allAds.filter(a => a.status !== "Prodano");
       if (currentCategory !== "Sve") {
         filtered = filtered.filter(a => a.category === currentCategory);
       }
@@ -613,9 +665,14 @@
       db.collection("ads").doc(id).update({ views: firebase.firestore.FieldValue.increment(1) });
       const favs = getFavorites();
       const isFav = favs.includes(id);
+      const user = getUser();
       let adminBtn = "";
       if (isAdmin()) {
         adminBtn = `<button onclick="confirmDeleteAd('${id}')" style="background:#e53935; color:white; border:none; padding:10px 16px; border-radius:8px; margin-top:10px; width:100%;">🗑️ Obriši oglas (Admin)</button>`;
+      }
+      let statusBtn = "";
+      if (user && user.name === ad.owner) {
+        statusBtn = `<button onclick="toggleAdStatus('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">${ad.status === "Prodano" ? "✅ Označi kao dostupno" : "📦 Označi kao prodano"}</button>`;
       }
       document.getElementById("ad-detail").innerHTML = `
         ${ad.photo ? `<img src="${ad.photo}" style="width:100%; height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">` : ""}
@@ -623,15 +680,36 @@
         <div class="price" style="font-size:20px; margin-bottom:8px;">${ad.price}</div>
         <p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"} • ${ad.category || ""}</p>
         <p style="margin-bottom:12px;">${ad.desc || "Nema opisa"}</p>
-        <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: ${ad.owner}</p>
+        <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: ${ad.owner} • ${ad.status || "Dostupno"}</p>
         <div style="display:flex; gap:8px; margin-bottom:10px;">
           <button class="btn-green" onclick="startChat('${ad.owner}')" style="flex:1;">💬 Pošalji poruku</button>
           <button onclick="toggleFavorite('${id}')" style="padding:12px 16px; background:${isFav ? '#e53935' : '#eee'}; border:none; border-radius:8px; color:${isFav ? 'white' : 'black'};">♥</button>
         </div>
+        <button onclick="shareAd('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">📤 Podijeli oglas</button>
+        ${statusBtn}
         <button onclick="openReportModal('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">⚠️ Prijavi oglas</button>
         ${adminBtn}
       `;
       showScreen("detail");
+    }
+
+    function toggleAdStatus(id) {
+      const ad = allAds.find(a => a.id === id);
+      if (!ad) return;
+      const newStatus = ad.status === "Prodano" ? "Dostupno" : "Prodano";
+      db.collection("ads").doc(id).update({ status: newStatus }).then(() => openAd(id));
+    }
+
+    function shareAd(id) {
+      const ad = allAds.find(a => a.id === id);
+      if (!ad) return;
+      const text = `${ad.product} - ${ad.price}\n${ad.city || ""}\nhttps://hadzicedin48-design.github.io/DomaceBIH/`;
+      if (navigator.share) {
+        navigator.share({ title: ad.product, text });
+      } else {
+        navigator.clipboard.writeText(text);
+        alert("Link kopiran!");
+      }
     }
 
     function openReportModal(id) {
@@ -877,7 +955,7 @@
       user.name = name;
       user.city = city;
       user.phone = phone;
-      user.password = password; // sprema se lokalno (za sada)
+      user.password = password;
       user.isAdmin = (name.toUpperCase() === ADMIN_NAME.toUpperCase());
       saveUser(user);
 
