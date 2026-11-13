@@ -33,6 +33,12 @@
         <button class="chip" onclick="setCategory('Meso', this)">Meso</button>
         <button class="chip" onclick="setCategory('Jaja', this)">Jaja</button>
       </div>
+      <div style="padding:8px 12px; background:#fff; display:flex; gap:8px; overflow-x:auto;">
+        <button class="chip" onclick="setDistance(0)">Sve udaljenosti</button>
+        <button class="chip" onclick="setDistance(10)">Do 10 km</button>
+        <button class="chip" onclick="setDistance(30)">Do 30 km</button>
+        <button class="chip" onclick="setDistance(50)">Do 50 km</button>
+      </div>
       <div id="map"></div>
       <div class="section-title">Najbliži proizvodi</div>
       <div class="products" id="home-products"></div>
@@ -146,6 +152,14 @@
       <div id="reports-list" style="padding:12px;"></div>
     </div>
 
+    <div class="screen" id="screen-users" style="display:none;">
+      <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
+        <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
+        <div class="logo-small">Korisnici</div>
+      </header>
+      <div id="users-list" style="padding:12px;"></div>
+    </div>
+
     <div class="screen" id="screen-categories" style="display:none;">
       <header><div class="logo-small">Kategorije</div></header>
       <div class="menu-list" style="margin:12px;">
@@ -233,6 +247,7 @@
     const ADMIN_NAME = "EDIN HADŽIIC";
     const MAX_FREE_ADS = 5;
     let currentCategory = "Sve";
+    let currentDistance = 0;
     let reportingAdId = null;
     let isRegisterMode = false;
     let markers = [];
@@ -281,6 +296,11 @@
       renderHomeProducts();
     }
 
+    function setDistance(km) {
+      currentDistance = km;
+      renderHomeProducts();
+    }
+
     function showScreen(name, el) {
       document.querySelectorAll(".screen").forEach(s => s.style.display = "none");
       document.getElementById("screen-" + name).style.display = "block";
@@ -293,6 +313,7 @@
       if (name === "messages") markAsRead();
       if (name === "favorites") renderFavorites();
       if (name === "reports") loadReports();
+      if (name === "users") loadUsers();
       document.getElementById("chat-menu").style.display = "none";
     }
 
@@ -300,6 +321,13 @@
     function saveUser(u) { localStorage.setItem("domaceUser", JSON.stringify(u)); }
     function getFavorites() { return JSON.parse(localStorage.getItem("domaceFavorites") || "[]"); }
     function saveFavorites(f) { localStorage.setItem("domaceFavorites", JSON.stringify(f)); }
+    function getHistory() { return JSON.parse(localStorage.getItem("domaceHistory") || "[]"); }
+    function addToHistory(id) {
+      let h = getHistory();
+      h = h.filter(x => x !== id);
+      h.unshift(id);
+      localStorage.setItem("domaceHistory", JSON.stringify(h.slice(0, 20)));
+    }
 
     function showConfirm(title, text, onConfirm) {
       document.getElementById("confirmTitle").textContent = title;
@@ -450,11 +478,12 @@
         viewsIcon.style.display = "inline";
         const myAds = allAds.filter(a => a.owner === user.name);
         const totalViews = myAds.reduce((sum, a) => sum + (a.views || 0), 0);
+        const totalFavs = myAds.reduce((sum, a) => sum + (getFavorites().filter(f => f === a.id).length), 0);
         container.innerHTML = `
           <div class="profile-box">
             <div class="avatar">${user.photo ? `<img src="${user.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : "👤"}</div>
             <h3>${user.name}</h3><p>${user.city || "BiH"}</p>
-            <p style="font-size:13px; color:#777; margin-top:6px;">Oglasa: ${myAds.length} • Pregleda: ${totalViews}</p>
+            <p style="font-size:13px; color:#777; margin-top:6px;">Oglasa: ${myAds.length} • Pregleda: ${totalViews} • Omiljenih: ${totalFavs}</p>
           </div>
           <div class="menu-list">
             <div class="menu-item" onclick="showScreen('myads')">📋 Moji oglasi</div>
@@ -472,7 +501,13 @@
       document.getElementById("settings-icon").style.display = "none";
       if (panel.style.display === "block") { closeSettings(); return; }
       panel.style.display = "block";
-      let adminItem = isAdmin() ? `<div class="menu-item" onclick="showScreen('reports')">⚠️ Prijave oglasa</div>` : "";
+      let adminItems = "";
+      if (isAdmin()) {
+        adminItems = `
+          <div class="menu-item" onclick="showScreen('reports')">⚠️ Prijave oglasa</div>
+          <div class="menu-item" onclick="showScreen('users')">👥 Korisnici</div>
+        `;
+      }
       panel.innerHTML = `
         <div class="menu-list" style="margin-top:0;">
           <div class="menu-item" onclick="editProfile()">✏️ Uredi profil</div>
@@ -481,7 +516,7 @@
           <div class="menu-item" onclick="showScreen('notifications')">🔔 Obavijesti</div>
           <div class="menu-item" onclick="toggleTheme()">🌙 Tamni režim</div>
           <div class="menu-item" onclick="shareApp()">📤 Podijeli aplikaciju</div>
-          ${adminItem}
+          ${adminItems}
           <div class="menu-item" onclick="confirmDeleteProfile()">🗑️ Obriši profil</div>
           <div class="menu-item" onclick="logout()">🚪 Odjava</div>
         </div>`;
@@ -596,7 +631,7 @@
           <div class="info">
             <div class="name">${ad.product}</div>
             <div class="price">${ad.price}</div>
-            <div class="distance">👁️ ${ad.views || 0} • ${ad.status || "Dostupno"}</div>
+            <div class="distance">👁️ ${ad.views || 0} • ♥ ${getFavorites().filter(f => f === ad.id).length} • ${ad.status || "Dostupno"}</div>
           </div>
         </div>`).join("");
     }
@@ -662,6 +697,7 @@
     function openAd(id) {
       const ad = allAds.find(a => a.id === id);
       if (!ad) return;
+      addToHistory(id);
       db.collection("ads").doc(id).update({ views: firebase.firestore.FieldValue.increment(1) });
       const favs = getFavorites();
       const isFav = favs.includes(id);
@@ -759,6 +795,28 @@
               </div>
             </div>`;
         }).join("");
+      });
+    }
+
+    function loadUsers() {
+      const list = document.getElementById("users-list");
+      db.collection("users").onSnapshot(snap => {
+        list.innerHTML = snap.docs.map(doc => {
+          const u = doc.data();
+          return `
+            <div class="menu-item" style="border-bottom:1px solid #eee; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+              <div>${u.name}</div>
+              <button onclick="banUser('${u.name}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Ban</button>
+            </div>`;
+        }).join("");
+      });
+    }
+
+    function banUser(name) {
+      showConfirm("Ban korisnika", "Banovati korisnika " + name + "?", () => {
+        db.collection("users").doc(name).update({ banned: true }).then(() => {
+          alert("Korisnik banovan");
+        });
       });
     }
 
