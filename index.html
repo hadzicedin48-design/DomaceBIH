@@ -256,9 +256,19 @@
         <input type="password" id="inputPassword" placeholder="Lozinka" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <input type="text" id="inputName" placeholder="Ime i prezime" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <input type="text" id="inputCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-        <input type="tel" id="inputPhone" placeholder="Broj telefona" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="tel" id="inputPhone" placeholder="Broj telefona (+387...)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <div id="recaptcha-container"></div>
         <button type="submit" class="btn-green">Potvrdi</button>
       </form>
+    </div>
+  </div>
+
+  <div class="modal" id="smsModal">
+    <div class="modal-content" style="text-align:center;">
+      <h2>Unesi SMS kod</h2>
+      <p style="margin-bottom:12px; color:#555;">Poslali smo kod na tvoj broj</p>
+      <input type="text" id="smsCode" placeholder="Kod" style="width:100%; padding:12px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; text-align:center;">
+      <button onclick="verifySmsCode()" class="btn-green">Potvrdi</button>
     </div>
   </div>
 
@@ -289,6 +299,8 @@
     let screenHistory = ["home"];
     let mapVisible = true;
     let currentUser = null;
+    let confirmationResult = null;
+    let pendingUserData = null;
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -1226,28 +1238,51 @@
       if (!email || !password) return alert("Unesite email i lozinku");
 
       if (isRegisterMode) {
-        auth.createUserWithEmailAndPassword(email, password)
-          .then(cred => {
-            return db.collection("users").doc(cred.user.uid).set({
-              email,
-              name: name || email,
-              city,
-              phone
-            });
-          })
-          .then(() => {
-            closeModal();
-            alert("Registracija uspješna!");
-          })
-          .catch(err => alert(err.message));
+        if (!phone) return alert("Unesite broj telefona");
+        pendingUserData = { email, password, name, city, phone };
+        sendSmsCode(phone);
       } else {
         auth.signInWithEmailAndPassword(email, password)
-          .then(() => {
-            closeModal();
-          })
+          .then(() => closeModal())
           .catch(err => alert(err.message));
       }
     }
+
+    function sendSmsCode(phone) {
+      const appVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", { size: "invisible" });
+      auth.signInWithPhoneNumber(phone, appVerifier)
+        .then(result => {
+          confirmationResult = result;
+          document.getElementById("smsModal").style.display = "flex";
+        })
+        .catch(err => alert("Greška: " + err.message));
+    }
+
+    function verifySmsCode() {
+      const code = document.getElementById("smsCode").value.trim();
+      if (!code || !confirmationResult) return;
+      confirmationResult.confirm(code)
+        .then(result => {
+          const user = result.user;
+          return db.collection("users").doc(user.uid).set({
+            email: pendingUserData.email,
+            name: pendingUserData.name || pendingUserData.email,
+            city: pendingUserData.city,
+            phone: pendingUserData.phone
+          }).then(() => {
+            return user.updateEmail(pendingUserData.email).then(() => {
+              return user.updatePassword(pendingUserData.password);
+            });
+          });
+        })
+        .then(() => {
+          document.getElementById("smsModal").style.display = "none";
+          closeModal();
+          alert("Registracija uspješna!");
+        })
+        .catch(err => alert("Pogrešan kod ili greška: " + err.message));
+    }
+
     function editProfile() {
       const user = getUser();
       if (!user) return;
