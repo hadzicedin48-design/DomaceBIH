@@ -801,14 +801,16 @@
     function loadUsers() {
       const list = document.getElementById("users-list");
       db.collection("users").onSnapshot(snap => {
-        list.innerHTML = snap.docs.map(doc => {
-          const u = doc.data();
-          return `
-            <div class="menu-item" style="border-bottom:1px solid #eee; padding:12px; display:flex; justify-content:space-between; align-items:center;">
-              <div>${u.name}</div>
-              <button onclick="banUser('${u.name}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Ban</button>
-            </div>`;
-        }).join("");
+        const count = snap.size;
+        list.innerHTML = `<div style="padding:12px; font-weight:bold; background:#f5f5f5; margin-bottom:8px; border-radius:8px;">Ukupno korisnika: ${count}</div>` +
+          snap.docs.map(doc => {
+            const u = doc.data();
+            return `
+              <div class="menu-item" style="border-bottom:1px solid #eee; padding:12px; display:flex; justify-content:space-between; align-items:center;">
+                <div>${u.name}</div>
+                <button onclick="banUser('${u.name}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Ban</button>
+              </div>`;
+          }).join("");
       });
     }
 
