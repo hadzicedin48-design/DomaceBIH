@@ -24,14 +24,14 @@
   <div class="app" id="app" style="display:none;">
     <div class="screen" id="screen-home">
       <header><div class="logo-small">DOMAĆE</div></header>
-      <div class="search-bar"><input type="text" placeholder="Pretraži proizvode"></div>
-      <div class="filters">
-        <button class="chip active">Sve</button>
-        <button class="chip">Voće</button>
-        <button class="chip">Povrće</button>
-        <button class="chip">Mlijeko</button>
-        <button class="chip">Meso</button>
-        <button class="chip">Jaja</button>
+      <div class="search-bar"><input type="text" id="search-input" placeholder="Pretraži proizvode" oninput="renderHomeProducts()"></div>
+      <div class="filters" id="home-filters">
+        <button class="chip active" onclick="setCategory('Sve', this)">Sve</button>
+        <button class="chip" onclick="setCategory('Voće', this)">Voće</button>
+        <button class="chip" onclick="setCategory('Povrće', this)">Povrće</button>
+        <button class="chip" onclick="setCategory('Mlijeko', this)">Mlijeko</button>
+        <button class="chip" onclick="setCategory('Meso', this)">Meso</button>
+        <button class="chip" onclick="setCategory('Jaja', this)">Jaja</button>
       </div>
       <div id="map"></div>
       <div class="section-title">Najbliži proizvodi</div>
@@ -67,6 +67,15 @@
           <input type="text" id="adProduct" placeholder="Proizvod (npr. Domaći med)" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
           <input type="text" id="adPrice" placeholder="Cijena (npr. 8,00 KM)" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
           <input type="text" id="adCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+          <select id="adCategory" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+            <option value="">Kategorija</option>
+            <option>Voće</option>
+            <option>Povrće</option>
+            <option>Mlijeko</option>
+            <option>Meso</option>
+            <option>Jaja</option>
+            <option>Ostalo</option>
+          </select>
           <textarea id="adDesc" placeholder="Opis proizvoda" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px; height:100px;"></textarea>
           <input type="file" id="adPhoto" accept="image/*" style="margin-bottom:12px;">
           <button type="submit" class="btn-green">Objavi oglas</button>
@@ -131,11 +140,19 @@
 
     <div class="screen" id="screen-categories" style="display:none;">
       <header><div class="logo-small">Kategorije</div></header>
-      <p style="padding:20px; text-align:center;">Kategorije - uskoro</p>
+      <div class="menu-list" style="margin:12px;">
+        <div class="menu-item" onclick="setCategory('Voće'); showScreen('home', document.querySelector('.nav-item'))">🍎 Voće</div>
+        <div class="menu-item" onclick="setCategory('Povrće'); showScreen('home', document.querySelector('.nav-item'))">🥕 Povrće</div>
+        <div class="menu-item" onclick="setCategory('Mlijeko'); showScreen('home', document.querySelector('.nav-item'))">🥛 Mlijeko</div>
+        <div class="menu-item" onclick="setCategory('Meso'); showScreen('home', document.querySelector('.nav-item'))">🥩 Meso</div>
+        <div class="menu-item" onclick="setCategory('Jaja'); showScreen('home', document.querySelector('.nav-item'))">🥚 Jaja</div>
+        <div class="menu-item" onclick="setCategory('Ostalo'); showScreen('home', document.querySelector('.nav-item'))">📦 Ostalo</div>
+      </div>
     </div>
+
     <div class="screen" id="screen-favorites" style="display:none;">
       <header><div class="logo-small">Omiljeno</div></header>
-      <p style="padding:20px; text-align:center;">Omiljeni proizvodi - uskoro</p>
+      <div class="products" id="favorites-list" style="padding:12px;"></div>
     </div>
 
     <nav class="bottom-nav">
@@ -145,7 +162,7 @@
       <div class="nav-item" onclick="showScreen('categories', this)">
         <div class="icon">▦</div><div>Kategorije</div>
       </div>
-      <div class="nav-item" onclick="showScreen('favorites', this)">
+      <div class="nav-item" onclick="showScreen('favorites', this); renderFavorites();">
         <div class="icon">♥</div><div>Omiljeno</div>
       </div>
       <div class="nav-item" onclick="showScreen('messages', this); showMessagesList();" style="position:relative;">
@@ -195,6 +212,7 @@
     const db = firebase.firestore();
 
     const ADMIN_NAME = "EDIN HADŽIIC";
+    let currentCategory = "Sve";
 
     setTimeout(function () {
       document.getElementById("splash").style.display = "none";
@@ -221,6 +239,13 @@
       return user && user.name === ADMIN_NAME;
     }
 
+    function setCategory(cat, el) {
+      currentCategory = cat;
+      document.querySelectorAll("#home-filters .chip").forEach(c => c.classList.remove("active"));
+      if (el) el.classList.add("active");
+      renderHomeProducts();
+    }
+
     function showScreen(name, el) {
       document.querySelectorAll(".screen").forEach(s => s.style.display = "none");
       document.getElementById("screen-" + name).style.display = "block";
@@ -231,11 +256,14 @@
       if (name === "myads") renderMyAds();
       if (name === "notifications") loadNotifSettings();
       if (name === "messages") markAsRead();
+      if (name === "favorites") renderFavorites();
       document.getElementById("chat-menu").style.display = "none";
     }
 
     function getUser() { return JSON.parse(localStorage.getItem("domaceUser") || "null"); }
     function saveUser(u) { localStorage.setItem("domaceUser", JSON.stringify(u)); }
+    function getFavorites() { return JSON.parse(localStorage.getItem("domaceFavorites") || "[]"); }
+    function saveFavorites(f) { localStorage.setItem("domaceFavorites", JSON.stringify(f)); }
 
     function showConfirm(title, text, onConfirm) {
       document.getElementById("confirmTitle").textContent = title;
@@ -257,6 +285,7 @@
         allAds = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderHomeProducts();
         if (document.getElementById("screen-myads").style.display === "block") renderMyAds();
+        if (document.getElementById("screen-favorites").style.display === "block") renderFavorites();
       });
     }
 
@@ -439,13 +468,14 @@
       const product = document.getElementById("adProduct").value.trim();
       const price = document.getElementById("adPrice").value.trim();
       const city = document.getElementById("adCity").value.trim();
+      const category = document.getElementById("adCategory").value;
       const desc = document.getElementById("adDesc").value.trim();
       const photoInput = document.getElementById("adPhoto");
       const user = getUser();
       if (!user) return alert("Morate biti prijavljeni");
 
       const ad = {
-        product, price, city, desc,
+        product, price, city, desc, category,
         views: 0,
         owner: user.name,
         phone: user.phone || "",
@@ -488,11 +518,22 @@
 
     function renderHomeProducts() {
       const container = document.getElementById("home-products");
-      if (!allAds.length) {
+      const search = (document.getElementById("search-input")?.value || "").toLowerCase();
+      let filtered = allAds;
+      if (currentCategory !== "Sve") {
+        filtered = filtered.filter(a => a.category === currentCategory);
+      }
+      if (search) {
+        filtered = filtered.filter(a => 
+          a.product.toLowerCase().includes(search) || 
+          (a.city || "").toLowerCase().includes(search)
+        );
+      }
+      if (!filtered.length) {
         container.innerHTML = "<p style='text-align:center;padding:20px;'>Nema oglasa</p>";
         return;
       }
-      container.innerHTML = allAds.map(ad => `
+      container.innerHTML = filtered.map(ad => `
         <div class="product-card" onclick="openAd('${ad.id}')">
           ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
           <div class="info">
@@ -503,10 +544,42 @@
         </div>`).join("");
     }
 
+    function renderFavorites() {
+      const container = document.getElementById("favorites-list");
+      const favs = getFavorites();
+      const favAds = allAds.filter(a => favs.includes(a.id));
+      if (!favAds.length) {
+        container.innerHTML = "<p style='text-align:center;padding:20px;'>Nema omiljenih</p>";
+        return;
+      }
+      container.innerHTML = favAds.map(ad => `
+        <div class="product-card" onclick="openAd('${ad.id}')">
+          ${ad.photo ? `<img src="${ad.photo}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
+          <div class="info">
+            <div class="name">${ad.product}</div>
+            <div class="price">${ad.price}</div>
+            <div class="distance">${ad.city || ""}</div>
+          </div>
+        </div>`).join("");
+    }
+
+    function toggleFavorite(id) {
+      let favs = getFavorites();
+      if (favs.includes(id)) {
+        favs = favs.filter(f => f !== id);
+      } else {
+        favs.push(id);
+      }
+      saveFavorites(favs);
+      openAd(id);
+    }
+
     function openAd(id) {
       const ad = allAds.find(a => a.id === id);
       if (!ad) return;
       db.collection("ads").doc(id).update({ views: firebase.firestore.FieldValue.increment(1) });
+      const favs = getFavorites();
+      const isFav = favs.includes(id);
       let adminBtn = "";
       if (isAdmin()) {
         adminBtn = `<button onclick="confirmDeleteAd('${id}')" style="background:#e53935; color:white; border:none; padding:10px 16px; border-radius:8px; margin-top:10px; width:100%;">🗑️ Obriši oglas (Admin)</button>`;
@@ -515,13 +588,22 @@
         ${ad.photo ? `<img src="${ad.photo}" style="width:100%; height:220px; object-fit:cover; border-radius:12px; margin-bottom:12px;">` : ""}
         <h2 style="margin-bottom:6px;">${ad.product}</h2>
         <div class="price" style="font-size:20px; margin-bottom:8px;">${ad.price}</div>
-        <p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"}</p>
+        <p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"} • ${ad.category || ""}</p>
         <p style="margin-bottom:12px;">${ad.desc || "Nema opisa"}</p>
         <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: ${ad.owner}</p>
-        <button class="btn-green" onclick="startChat('${ad.owner}')">💬 Pošalji poruku</button>
+        <div style="display:flex; gap:8px; margin-bottom:10px;">
+          <button class="btn-green" onclick="startChat('${ad.owner}')" style="flex:1;">💬 Pošalji poruku</button>
+          <button onclick="toggleFavorite('${id}')" style="padding:12px 16px; background:${isFav ? '#e53935' : '#eee'}; border:none; border-radius:8px; color:${isFav ? 'white' : 'black'};">♥</button>
+        </div>
+        <button onclick="reportAd('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">⚠️ Prijavi oglas</button>
         ${adminBtn}
       `;
       showScreen("detail");
+    }
+
+    function reportAd(id) {
+      const reason = prompt("Razlog prijave oglasa:");
+      if (reason) alert("Prijava poslana. Hvala!");
     }
 
     function confirmDeleteAd(id) {
@@ -704,7 +786,6 @@
       const user = getUser() || {};
       user.name = name; user.city = city; user.phone = phone;
       saveUser(user);
-      // Spremi osnovne podatke u Firebase
       db.collection("users").doc(user.name).set({
         name: user.name,
         city: user.city || "",
