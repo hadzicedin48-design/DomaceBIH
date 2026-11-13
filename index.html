@@ -11,6 +11,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
   <style>
     body.dark { background: #121212 !important; color: #eee !important; }
     body.dark .screen { background: #1e1e1e; color: #eee; }
@@ -251,11 +252,11 @@
       <span class="close" onclick="closeModal()">&times;</span>
       <h2 id="modalTitle">Prijava</h2>
       <form id="authForm" onsubmit="handleAuth(event)">
-        <input type="text" id="inputName" placeholder="Ime i prezime" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="email" id="inputEmail" placeholder="Email" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="password" id="inputPassword" placeholder="Lozinka" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
+        <input type="text" id="inputName" placeholder="Ime i prezime" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <input type="text" id="inputCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <input type="tel" id="inputPhone" placeholder="Broj telefona" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-        <input type="password" id="inputPassword" placeholder="Lozinka" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-        <input type="password" id="inputPassword2" placeholder="Ponovi lozinku" style="display:none; width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <button type="submit" class="btn-green">Potvrdi</button>
       </form>
     </div>
@@ -272,8 +273,9 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    const ADMIN_NAME = "EDIN HADŽIIC";
+    const ADMIN_EMAIL = "hadzicedin48@gmail.com";
     const MAX_FREE_ADS = 5;
     let currentCategory = "Sve";
     let currentSort = "newest";
@@ -286,6 +288,7 @@
     let editingAdId = null;
     let screenHistory = ["home"];
     let mapVisible = true;
+    let currentUser = null;
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -298,14 +301,35 @@
 
     const ALCOHOL_WORDS = ["alkohol", "pivo", "vino", "rakija", "viski", "žestoko", "beer", "wine"];
 
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      if (user) {
+        db.collection("users").doc(user.uid).get().then(doc => {
+          if (doc.exists) {
+            localStorage.setItem("domaceUser", JSON.stringify({
+              uid: user.uid,
+              email: user.email,
+              name: doc.data().name || user.email,
+              city: doc.data().city || "",
+              phone: doc.data().phone || "",
+              photo: doc.data().photo || ""
+            }));
+          }
+          renderProfile();
+          listenForUnread();
+          listenForProfileViews();
+        });
+      } else {
+        localStorage.removeItem("domaceUser");
+        renderProfile();
+      }
+    });
+
     setTimeout(function () {
       document.getElementById("splash").style.display = "none";
       document.getElementById("app").style.display = "block";
       setTimeout(initMap, 300);
-      renderProfile();
       loadAds();
-      listenForUnread();
-      listenForProfileViews();
       applyTheme();
     }, 1600);
 
@@ -351,8 +375,7 @@
     }
 
     function isAdmin() {
-      const user = getUser();
-      return user && user.name === ADMIN_NAME && user.isAdmin === true;
+      return currentUser && currentUser.email === ADMIN_EMAIL;
     }
 
     function isNew(ad) {
@@ -451,11 +474,11 @@
     function listenForUnread() {
       const user = getUser();
       if (!user) return;
-      db.collection("chats").where("participants", "array-contains", user.name).onSnapshot(snap => {
+      db.collection("chats").where("participants", "array-contains", user.email).onSnapshot(snap => {
         let count = 0;
         snap.forEach(doc => {
           const data = doc.data();
-          if (data.lastSender && data.lastSender !== user.name && !data.readBy?.includes(user.name)) {
+          if (data.lastSender && data.lastSender !== user.email && !data.readBy?.includes(user.email)) {
             count++;
           }
         });
@@ -467,7 +490,7 @@
     function listenForProfileViews() {
       const user = getUser();
       if (!user) return;
-      db.collection("profileViews").doc(user.name).collection("views").orderBy("time", "desc").onSnapshot(snap => {
+      db.collection("profileViews").doc(user.email).collection("views").orderBy("time", "desc").onSnapshot(snap => {
         profileViews = snap.docs.map(doc => doc.data());
         const badge = document.getElementById("views-badge");
         const icon = document.getElementById("views-icon");
@@ -501,11 +524,11 @@
       `).join("")}</div>`;
     }
 
-    function recordProfileView(profileName) {
+    function recordProfileView(profileEmail) {
       const user = getUser();
-      if (!user || user.name === profileName) return;
-      db.collection("profileViews").doc(profileName).collection("views").add({
-        viewer: user.name,
+      if (!user || user.email === profileEmail) return;
+      db.collection("profileViews").doc(profileEmail).collection("views").add({
+        viewer: user.name || user.email,
         time: firebase.firestore.FieldValue.serverTimestamp()
       });
     }
@@ -523,12 +546,12 @@
     function markAsRead() {
       const user = getUser();
       if (!user) return;
-      db.collection("chats").where("participants", "array-contains", user.name).get().then(snap => {
+      db.collection("chats").where("participants", "array-contains", user.email).get().then(snap => {
         snap.forEach(doc => {
           const data = doc.data();
-          if (!data.readBy?.includes(user.name)) {
+          if (!data.readBy?.includes(user.email)) {
             doc.ref.update({
-              readBy: firebase.firestore.FieldValue.arrayUnion(user.name)
+              readBy: firebase.firestore.FieldValue.arrayUnion(user.email)
             });
           }
         });
@@ -557,7 +580,7 @@
       } else {
         settingsIcon.style.display = "inline";
         viewsIcon.style.display = "inline";
-        const myAds = allAds.filter(a => a.owner === user.name);
+        const myAds = allAds.filter(a => a.owner === user.email);
         const totalViews = myAds.reduce((sum, a) => sum + (a.views || 0), 0);
         const totalFavs = myAds.reduce((sum, a) => sum + (getFavorites().filter(f => f === a.id).length), 0);
         let adminItems = "";
@@ -570,7 +593,7 @@
         container.innerHTML = `
           <div class="profile-box">
             <div class="avatar">${user.photo ? `<img src="${user.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : "👤"}</div>
-            <h3>${user.name}</h3><p>${user.city || "BiH"}</p>
+            <h3>${user.name || user.email}</h3><p>${user.city || "BiH"}</p>
             <p style="font-size:13px; color:#777; margin-top:6px;">Oglasa: ${myAds.length} • Pregleda: ${totalViews} • Omiljenih: ${totalFavs}</p>
           </div>
           <div class="menu-list">
@@ -625,6 +648,7 @@
 
     function confirmDeleteProfile() {
       showConfirm("Obriši profil", "Jeste li sigurni da želite obrisati svoj profil? Ova radnja se ne može poništiti.", () => {
+        auth.signOut();
         localStorage.removeItem("domaceUser");
         renderProfile();
         alert("Profil obrisan");
@@ -674,7 +698,7 @@
       }
 
       if (!editingAdId) {
-        const myCount = allAds.filter(a => a.owner === user.name).length;
+        const myCount = allAds.filter(a => a.owner === user.email).length;
         if (myCount >= MAX_FREE_ADS && !isAdmin()) {
           alert("Dostigli ste limit od " + MAX_FREE_ADS + " oglasa.");
           return;
@@ -685,7 +709,8 @@
         product, price, unit, qty, city, desc, category,
         views: editingAdId ? (allAds.find(a => a.id === editingAdId)?.views || 0) : 0,
         status: "Dostupno",
-        owner: user.name,
+        owner: user.email,
+        ownerName: user.name || user.email,
         phone: user.phone || "",
         created: editingAdId ? (allAds.find(a => a.id === editingAdId)?.created || firebase.firestore.FieldValue.serverTimestamp()) : firebase.firestore.FieldValue.serverTimestamp()
       };
@@ -745,7 +770,7 @@
     function renderMyAds() {
       const list = document.getElementById("my-ads-list");
       const user = getUser();
-      const my = allAds.filter(a => a.owner === user?.name);
+      const my = allAds.filter(a => a.owner === user?.email);
       if (!my.length) { list.innerHTML = "<p style='text-align:center;padding:20px;'>Nemate oglasa</p>"; return; }
       list.innerHTML = my.map(ad => `
         <div class="product-card">
@@ -840,7 +865,7 @@
       const favs = getFavorites();
       const isFav = favs.includes(id);
       const user = getUser();
-      const isOwner = user && user.name === ad.owner;
+      const isOwner = user && user.email === ad.owner;
       currentGallery = ad.photos || [];
       galleryIndex = 0;
       let adminBtn = "";
@@ -870,7 +895,7 @@
         <p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"} • ${ad.category || ""}</p>
         <p style="margin-bottom:4px;">Količina: ${ad.qty || "Nije navedeno"}</p>
         <p style="margin-bottom:12px;">${ad.desc || "Nema opisa"}</p>
-        <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: <span style="color:#1a5c2e; cursor:pointer;" onclick="openSeller('${ad.owner}')">${ad.owner}</span> • ${ad.status || "Dostupno"}<br>Objavljeno: ${formatDate(ad.created)}</p>
+        <p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: <span style="color:#1a5c2e; cursor:pointer;" onclick="openSeller('${ad.owner}')">${ad.ownerName || ad.owner}</span> • ${ad.status || "Dostupno"}<br>Objavljeno: ${formatDate(ad.created)}</p>
         <div style="display:flex; gap:8px; margin-bottom:10px;">
           <button class="btn-green" onclick="startChat('${ad.owner}')" style="flex:1;">💬 Pošalji poruku</button>
           <button onclick="toggleFavorite('${id}')" style="padding:12px 16px; background:${isFav ? '#e53935' : '#eee'}; border:none; border-radius:8px; color:${isFav ? 'white' : 'black'};">♥</button>
@@ -894,9 +919,9 @@
       document.getElementById("gallery-img").src = currentGallery[galleryIndex];
     }
 
-    function openSeller(name) {
-      document.getElementById("seller-title").textContent = name;
-      const ads = allAds.filter(a => a.owner === name && a.status !== "Prodano");
+    function openSeller(email) {
+      document.getElementById("seller-title").textContent = email;
+      const ads = allAds.filter(a => a.owner === email && a.status !== "Prodano");
       document.getElementById("seller-ads").innerHTML = ads.length ? ads.map(ad => `
         <div class="product-card" onclick="openAd('${ad.id}')">
           ${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
@@ -945,7 +970,7 @@
       db.collection("reports").add({
         adId: reportingAdId,
         reason: reason,
-        reporter: user.name,
+        reporter: user.email,
         time: firebase.firestore.FieldValue.serverTimestamp(),
         status: "new"
       }).then(() => {
@@ -987,16 +1012,16 @@
             const u = doc.data();
             return `
               <div class="menu-item" style="border-bottom:1px solid #eee; padding:12px; display:flex; justify-content:space-between; align-items:center;">
-                <div>${u.name}</div>
-                <button onclick="banUser('${u.name}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Ban</button>
+                <div>${u.name || u.email}</div>
+                <button onclick="banUser('${doc.id}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Ban</button>
               </div>`;
           }).join("");
       });
     }
 
-    function banUser(name) {
-      showConfirm("Ban korisnika", "Banovati korisnika " + name + "?", () => {
-        db.collection("users").doc(name).update({ banned: true }).then(() => {
+    function banUser(uid) {
+      showConfirm("Ban korisnika", "Banovati ovog korisnika?", () => {
+        db.collection("users").doc(uid).update({ banned: true }).then(() => {
           alert("Korisnik banovan");
         });
       });
@@ -1023,7 +1048,7 @@
         document.getElementById("messages-list").innerHTML = "<p style='text-align:center;padding:30px;'>Prijavite se</p>";
         return;
       }
-      db.collection("chats").where("participants", "array-contains", user.name).onSnapshot(snap => {
+      db.collection("chats").where("participants", "array-contains", user.email).onSnapshot(snap => {
         const list = document.getElementById("messages-list");
         if (snap.empty) {
           list.innerHTML = "<p style='text-align:center; padding:30px; color:#999;'>Nema razgovora</p>";
@@ -1031,45 +1056,33 @@
         }
         list.innerHTML = snap.docs.map(doc => {
           const data = doc.data();
-          const other = data.participants.find(p => p !== user.name) || "Nepoznat";
-          const unread = data.lastSender && data.lastSender !== user.name && !data.readBy?.includes(user.name);
+          const other = data.participants.find(p => p !== user.email) || "Nepoznat";
+          const unread = data.lastSender && data.lastSender !== user.email && !data.readBy?.includes(user.email);
           return `
             <div class="menu-item" onclick="startChat('${other}')" style="border-bottom:1px solid #eee; display:flex; align-items:center; gap:10px; position:relative;">
-              <div id="photo-${other.replace(/\s/g,'')}" style="width:40px; height:40px; border-radius:50%; background:#eee; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
+              <div id="photo-${other.replace(/[^a-zA-Z0-9]/g,'')}" style="width:40px; height:40px; border-radius:50%; background:#eee; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                 👤
               </div>
               <div style="flex:1;">💬 ${other}</div>
               ${unread ? '<span style="background:#e53935; color:white; border-radius:10px; font-size:11px; min-width:18px; height:18px; line-height:18px; text-align:center; padding:0 5px;">1</span>' : ''}
             </div>`;
         }).join("");
-
-        snap.docs.forEach(doc => {
-          const other = doc.data().participants.find(p => p !== user.name);
-          if (other) {
-            db.collection("users").doc(other).get().then(uDoc => {
-              if (uDoc.exists && uDoc.data().photo) {
-                const el = document.getElementById("photo-" + other.replace(/\s/g,''));
-                if (el) el.innerHTML = `<img src="${uDoc.data().photo}" style="width:100%; height:100%; object-fit:cover;">`;
-              }
-            });
-          }
-        });
       });
     }
 
-    function startChat(withName) {
+    function startChat(withEmail) {
       const user = getUser();
       if (!user) return alert("Prijavite se");
-      currentChatWith = withName;
-      document.getElementById("chat-title").textContent = withName;
+      currentChatWith = withEmail;
+      document.getElementById("chat-title").textContent = withEmail;
       document.getElementById("messages-list").style.display = "none";
       document.getElementById("chat-area").style.display = "block";
       document.getElementById("chat-menu-btn").style.display = "inline";
       showScreen("messages");
 
-      const chatId = [user.name, withName].sort().join("_");
+      const chatId = [user.email, withEmail].sort().join("_");
       db.collection("chats").doc(chatId).update({
-        readBy: firebase.firestore.FieldValue.arrayUnion(user.name)
+        readBy: firebase.firestore.FieldValue.arrayUnion(user.email)
       }).catch(() => {});
 
       if (unsubscribeChat) unsubscribeChat();
@@ -1081,8 +1094,8 @@
             const m = doc.data();
             const timeStr = m.time ? formatDate(m.time) : "";
             return `
-              <div style="margin:8px 0; text-align:${m.sender === user.name ? "right" : "left"};">
-                <div style="display:inline-block; background:${m.sender === user.name ? "#1a5c2e" : "#eee"}; color:${m.sender === user.name ? "white" : "black"}; padding:8px 12px; border-radius:12px; max-width:75%;">
+              <div style="margin:8px 0; text-align:${m.sender === user.email ? "right" : "left"};">
+                <div style="display:inline-block; background:${m.sender === user.email ? "#1a5c2e" : "#eee"}; color:${m.sender === user.email ? "white" : "black"}; padding:8px 12px; border-radius:12px; max-width:75%;">
                   ${m.image ? `<img src="${m.image}" style="max-width:180px; border-radius:8px; display:block; margin-bottom:4px;">` : ""}
                   ${m.text || ""}
                   <div style="font-size:10px; opacity:0.7; margin-top:4px;">${timeStr}</div>
@@ -1102,7 +1115,7 @@
       document.getElementById("chat-menu").style.display = "none";
       showConfirm("Obriši chat", "Jeste li sigurni da želite obrisati ovaj chat?", () => {
         const user = getUser();
-        const chatId = [user.name, currentChatWith].sort().join("_");
+        const chatId = [user.email, currentChatWith].sort().join("_");
         db.collection("chats").doc(chatId).delete().then(() => {
           showMessagesList();
         });
@@ -1142,20 +1155,20 @@
       const user = getUser();
       if (!text || !currentChatWith || !user) return;
 
-      const chatId = [user.name, currentChatWith].sort().join("_");
+      const chatId = [user.email, currentChatWith].sort().join("_");
       const chatRef = db.collection("chats").doc(chatId);
 
       chatRef.set({
-        participants: [user.name, currentChatWith],
+        participants: [user.email, currentChatWith],
         lastMessage: text,
-        lastSender: user.name,
-        readBy: [user.name],
+        lastSender: user.email,
+        readBy: [user.email],
         updated: firebase.firestore.FieldValue.serverTimestamp()
       }, { merge: true });
 
       chatRef.collection("messages").add({
         text,
-        sender: user.name,
+        sender: user.email,
         time: firebase.firestore.FieldValue.serverTimestamp()
       });
 
@@ -1169,18 +1182,18 @@
       if (!user) return;
       const reader = new FileReader();
       reader.onload = () => {
-        const chatId = [user.name, currentChatWith].sort().join("_");
+        const chatId = [user.email, currentChatWith].sort().join("_");
         const chatRef = db.collection("chats").doc(chatId);
         chatRef.set({
-          participants: [user.name, currentChatWith],
+          participants: [user.email, currentChatWith],
           lastMessage: "📷 Slika",
-          lastSender: user.name,
-          readBy: [user.name],
+          lastSender: user.email,
+          readBy: [user.email],
           updated: firebase.firestore.FieldValue.serverTimestamp()
         }, { merge: true });
         chatRef.collection("messages").add({
           image: reader.result,
-          sender: user.name,
+          sender: user.email,
           time: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
           input.value = "";
@@ -1192,7 +1205,9 @@
     function openModal(type) {
       isRegisterMode = (type === "register");
       document.getElementById("modalTitle").textContent = isRegisterMode ? "Registracija" : "Prijava";
-      document.getElementById("inputPassword2").style.display = isRegisterMode ? "block" : "none";
+      document.getElementById("inputName").style.display = isRegisterMode ? "block" : "none";
+      document.getElementById("inputCity").style.display = isRegisterMode ? "block" : "none";
+      document.getElementById("inputPhone").style.display = isRegisterMode ? "block" : "none";
       document.getElementById("authModal").style.display = "flex";
     }
     function closeModal() {
@@ -1202,46 +1217,48 @@
     }
     function handleAuth(e) {
       e.preventDefault();
+      const email = document.getElementById("inputEmail").value.trim();
+      const password = document.getElementById("inputPassword").value;
       const name = document.getElementById("inputName").value.trim();
       const city = document.getElementById("inputCity").value.trim();
       const phone = document.getElementById("inputPhone").value.trim();
-      const password = document.getElementById("inputPassword").value;
-      const password2 = document.getElementById("inputPassword2").value;
 
-      if (!name || !password) return alert("Unesite ime i lozinku");
+      if (!email || !password) return alert("Unesite email i lozinku");
 
       if (isRegisterMode) {
-        if (password !== password2) return alert("Lozinke se ne poklapaju");
-        if (password.length < 4) return alert("Lozinka mora imati najmanje 4 znaka");
+        auth.createUserWithEmailAndPassword(email, password)
+          .then(cred => {
+            return db.collection("users").doc(cred.user.uid).set({
+              email,
+              name: name || email,
+              city,
+              phone
+            });
+          })
+          .then(() => {
+            closeModal();
+            alert("Registracija uspješna!");
+          })
+          .catch(err => alert(err.message));
+      } else {
+        auth.signInWithEmailAndPassword(email, password)
+          .then(() => {
+            closeModal();
+          })
+          .catch(err => alert(err.message));
       }
-
-      const user = getUser() || {};
-      user.name = name;
-      user.city = city;
-      user.phone = phone;
-      user.password = password;
-      user.isAdmin = (name.toUpperCase() === ADMIN_NAME.toUpperCase());
-      saveUser(user);
-
-      db.collection("users").doc(user.name).set({
-        name: user.name,
-        city: user.city || "",
-        phone: user.phone || ""
-      }, { merge: true });
-
-      closeModal();
-      renderProfile();
-      listenForUnread();
-      listenForProfileViews();
     }
     function editProfile() {
       const user = getUser();
       if (!user) return;
+      document.getElementById("inputEmail").value = user.email || "";
       document.getElementById("inputName").value = user.name || "";
       document.getElementById("inputCity").value = user.city || "";
       document.getElementById("inputPhone").value = user.phone || "";
+      document.getElementById("inputName").style.display = "block";
+      document.getElementById("inputCity").style.display = "block";
+      document.getElementById("inputPhone").style.display = "block";
       document.getElementById("modalTitle").textContent = "Uredi profil";
-      document.getElementById("inputPassword2").style.display = "none";
       document.getElementById("authModal").style.display = "flex";
       closeSettings();
     }
@@ -1265,11 +1282,11 @@
           const user = getUser() || {};
           user.photo = reader.result;
           saveUser(user);
-          db.collection("users").doc(user.name).set({
-            name: user.name,
-            photo: user.photo,
-            city: user.city || ""
-          }, { merge: true });
+          if (currentUser) {
+            db.collection("users").doc(currentUser.uid).set({
+              photo: user.photo
+            }, { merge: true });
+          }
           renderProfile();
         };
         reader.readAsDataURL(file);
@@ -1281,7 +1298,11 @@
       if (navigator.share) navigator.share({ title: "Domaće", url });
       else { navigator.clipboard.writeText(url); alert("Link kopiran!"); }
     }
-    function logout() { localStorage.removeItem("domaceUser"); renderProfile(); }
+    function logout() { 
+      auth.signOut();
+      localStorage.removeItem("domaceUser"); 
+      renderProfile(); 
+    }
   </script>
 </body>
 </html>
