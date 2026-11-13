@@ -133,7 +133,7 @@
           <input type="text" id="chat-input" placeholder="Napiši poruku..." style="flex:1; padding:10px; border:1px solid #ddd; border-radius:20px;">
           <button onclick="document.getElementById('chat-file').click()" style="background:#eee; border:none; border-radius:20px; padding:0 12px; font-size:18px;">📷</button>
           <button onclick="shareMyLocation()" style="background:#eee; border:none; border-radius:20px; padding:0 12px; font-size:18px;">📍</button>
-          <input type="file" id="chat-file" accept="image/*" style="display:none;" onchange="sendChatImage(this)">
+          <input type="file" id="chat-file" accept="image/*" capture="environment" style="display:none;" onchange="sendChatImage(this)">
           <button onclick="sendChatMessage()" style="background:#1a5c2e; color:white; border:none; border-radius:20px; padding:0 16px;">Pošalji</button>
         </div>
       </div>
@@ -884,12 +884,14 @@
         list.innerHTML = snap.docs.map(doc => {
           const data = doc.data();
           const other = data.participants.find(p => p !== user.name) || "Nepoznat";
+          const unread = data.lastSender && data.lastSender !== user.name && !data.readBy?.includes(user.name);
           return `
-            <div class="menu-item" onclick="startChat('${other}')" style="border-bottom:1px solid #eee; display:flex; align-items:center; gap:10px;">
+            <div class="menu-item" onclick="startChat('${other}')" style="border-bottom:1px solid #eee; display:flex; align-items:center; gap:10px; position:relative;">
               <div id="photo-${other.replace(/\s/g,'')}" style="width:40px; height:40px; border-radius:50%; background:#eee; overflow:hidden; flex-shrink:0; display:flex; align-items:center; justify-content:center;">
                 👤
               </div>
-              <div>💬 ${other}</div>
+              <div style="flex:1;">💬 ${other}</div>
+              ${unread ? '<span style="background:#e53935; color:white; border-radius:10px; font-size:11px; min-width:18px; height:18px; line-height:18px; text-align:center; padding:0 5px;">1</span>' : ''}
             </div>`;
         }).join("");
 
@@ -918,6 +920,10 @@
       showScreen("messages");
 
       const chatId = [user.name, withName].sort().join("_");
+      db.collection("chats").doc(chatId).update({
+        readBy: firebase.firestore.FieldValue.arrayUnion(user.name)
+      }).catch(() => {});
+
       if (unsubscribeChat) unsubscribeChat();
       unsubscribeChat = db.collection("chats").doc(chatId).collection("messages")
         .orderBy("time")
@@ -1026,6 +1032,8 @@
           image: reader.result,
           sender: user.name,
           time: firebase.firestore.FieldValue.serverTimestamp()
+        }).then(() => {
+          input.value = "";
         });
       };
       reader.readAsDataURL(file);
