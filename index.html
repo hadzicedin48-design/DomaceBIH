@@ -60,7 +60,7 @@
     <div class="screen" id="screen-add" style="display:none;">
       <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
         <span style="font-size:24px; cursor:pointer;" onclick="showScreen('profile', document.querySelector('.nav-item:last-child'))">←</span>
-        <div class="logo-small">Dodaj oglas</div>
+        <div class="logo-small" id="add-title">Dodaj oglas</div>
       </header>
       <div style="padding:16px;">
         <form id="adForm" onsubmit="saveAd(event)">
@@ -85,7 +85,7 @@
           </select>
           <textarea id="adDesc" placeholder="Opis proizvoda" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px; height:100px;"></textarea>
           <input type="file" id="adPhotos" accept="image/*" multiple style="margin-bottom:12px;">
-          <button type="submit" class="btn-green">Objavi oglas</button>
+          <button type="submit" class="btn-green" id="adSubmitBtn">Objavi oglas</button>
         </form>
       </div>
     </div>
@@ -269,6 +269,7 @@
     let myMarker = null;
     let currentGallery = [];
     let galleryIndex = 0;
+    let editingAdId = null;
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -620,26 +621,34 @@
         return;
       }
 
-      const myCount = allAds.filter(a => a.owner === user.name).length;
-      if (myCount >= MAX_FREE_ADS && !isAdmin()) {
-        alert("Dostigli ste limit od " + MAX_FREE_ADS + " oglasa.");
-        return;
+      if (!editingAdId) {
+        const myCount = allAds.filter(a => a.owner === user.name).length;
+        if (myCount >= MAX_FREE_ADS && !isAdmin()) {
+          alert("Dostigli ste limit od " + MAX_FREE_ADS + " oglasa.");
+          return;
+        }
       }
 
       const ad = {
         product, price, unit, city, desc, category,
-        views: 0,
+        views: editingAdId ? (allAds.find(a => a.id === editingAdId)?.views || 0) : 0,
         status: "Dostupno",
         owner: user.name,
         phone: user.phone || "",
-        created: firebase.firestore.FieldValue.serverTimestamp()
+        created: editingAdId ? (allAds.find(a => a.id === editingAdId)?.created || firebase.firestore.FieldValue.serverTimestamp()) : firebase.firestore.FieldValue.serverTimestamp()
       };
 
       function upload(photos) {
         if (photos.length) ad.photos = photos;
-        db.collection("ads").add(ad).then(() => {
-          alert("Oglas objavljen!");
+        const promise = editingAdId 
+          ? db.collection("ads").doc(editingAdId).set(ad, { merge: true })
+          : db.collection("ads").add(ad);
+        promise.then(() => {
+          showConfirm("Oglas aktivan", "Vaš oglas je uspješno objavljen i aktivan.", () => {});
           document.getElementById("adForm").reset();
+          editingAdId = null;
+          document.getElementById("add-title").textContent = "Dodaj oglas";
+          document.getElementById("adSubmitBtn").textContent = "Objavi oglas";
           showScreen("myads");
         });
       }
@@ -656,18 +665,48 @@
       }
     }
 
+    function editAd(id) {
+      const ad = allAds.find(a => a.id === id);
+      if (!ad) return;
+      editingAdId = id;
+      document.getElementById("adProduct").value = ad.product || "";
+      document.getElementById("adPrice").value = ad.price || "";
+      document.getElementById("adUnit").value = ad.unit || "kg";
+      document.getElementById("adCity").value = ad.city || "";
+      document.getElementById("adCategory").value = ad.category || "";
+      document.getElementById("adDesc").value = ad.desc || "";
+      document.getElementById("add-title").textContent = "Uredi oglas";
+      document.getElementById("adSubmitBtn").textContent = "Sačuvaj izmjene";
+      showScreen("add");
+    }
+
+    function confirmDeleteOwnAd(id) {
+      showConfirm("Obriši oglas", "Jeste li sigurni da želite obrisati svoj oglas?", () => {
+        db.collection("ads").doc(id).delete().then(() => {
+          alert("Oglas obrisan");
+          showScreen("myads");
+        });
+      });
+    }
+
     function renderMyAds() {
       const list = document.getElementById("my-ads-list");
       const user = getUser();
       const my = allAds.filter(a => a.owner === user?.name);
       if (!my.length) { list.innerHTML = "<p style='text-align:center;padding:20px;'>Nemate oglasa</p>"; return; }
       list.innerHTML = my.map(ad => `
-        <div class="product-card" onclick="openAd('${ad.id}')">
-          ${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
-          <div class="info">
-            <div class="name">${ad.product} ${isNew(ad) ? '<span style="background:#e53935;color:white;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:6px;">NOVI</span>' : ''}</div>
-            <div class="price">${ad.price} / ${ad.unit || 'kg'}</div>
-            <div class="distance">👁️ ${ad.views || 0} • ♥ ${getFavorites().filter(f => f === ad.id).length} • ${ad.status || "Dostupno"}</div>
+        <div class="product-card">
+          <div onclick="openAd('${ad.id}')" style="display:flex; gap:12px; flex:1; align-items:center;">
+            ${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}
+            <div class="info">
+              <div class="name">${ad.product} ${isNew(ad) ? '<span style="background:#e53935;color:white;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:6px;">NOVI</span>' : ''}</div>
+              <div class="price">${ad.price} / ${ad.unit || 'kg'}</div>
+              <div class="distance">👁️ ${ad.views || 0} • ♥ ${getFavorites().filter(f => f === ad.id).length} • ${ad.status || "Dostupno"}</div>
+            </div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; margin-left:8px;">
+            <button onclick="editAd('${ad.id}')" style="padding:6px 10px; background:#1a5c2e; color:white; border:none; border-radius:6px; font-size:12px;">Uredi</button>
+            <button onclick="confirmDeleteOwnAd('${ad.id}')" style="padding:6px 10px; background:#e53935; color:white; border:none; border-radius:6px; font-size:12px;">Obriši</button>
           </div>
         </div>`).join("");
     }
@@ -738,6 +777,7 @@
       const favs = getFavorites();
       const isFav = favs.includes(id);
       const user = getUser();
+      const isOwner = user && user.name === ad.owner;
       currentGallery = ad.photos || [];
       galleryIndex = 0;
       let adminBtn = "";
@@ -745,8 +785,12 @@
         adminBtn = `<button onclick="confirmDeleteAd('${id}')" style="background:#e53935; color:white; border:none; padding:10px 16px; border-radius:8px; margin-top:10px; width:100%;">🗑️ Obriši oglas (Admin)</button>`;
       }
       let statusBtn = "";
-      if (user && user.name === ad.owner) {
+      if (isOwner) {
         statusBtn = `<button onclick="toggleAdStatus('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">${ad.status === "Prodano" ? "✅ Označi kao dostupno" : "📦 Označi kao prodano"}</button>`;
+      }
+      let reportBtn = "";
+      if (!isOwner) {
+        reportBtn = `<button onclick="openReportModal('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">⚠️ Prijavi oglas</button>`;
       }
       document.getElementById("ad-detail").innerHTML = `
         ${currentGallery.length ? `
@@ -769,7 +813,7 @@
         </div>
         <button onclick="shareAd('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">📤 Podijeli oglas</button>
         ${statusBtn}
-        <button onclick="openReportModal('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">⚠️ Prijavi oglas</button>
+        ${reportBtn}
         ${adminBtn}
       `;
       showScreen("detail");
