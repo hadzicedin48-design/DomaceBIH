@@ -18,6 +18,35 @@
     body.dark .menu-item, body.dark .product-card, body.dark .profile-box { background: #2a2a2a; color: #eee; }
     body.dark header { background: #0d3d1f; }
     body.dark .bottom-nav { background: #1e1e1e; }
+
+    .photo-upload {
+      border: 2px dashed #1a5c2e;
+      border-radius: 16px;
+      padding: 30px 16px;
+      text-align: center;
+      margin: 16px 0;
+      cursor: pointer;
+      background: #f9fff9;
+    }
+    .photo-upload:hover { background: #f0fff0; }
+    .photo-upload .cam-icon { font-size: 36px; color: #1a5c2e; margin-bottom: 8px; }
+    .photo-upload p { color: #1a5c2e; font-weight: 500; margin: 0; }
+
+    .success-check {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 80px;
+      color: #1a5c2e;
+      z-index: 9999;
+      animation: popIn 0.3s ease;
+      pointer-events: none;
+    }
+    @keyframes popIn {
+      from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+      to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -77,19 +106,12 @@
       </header>
       <div style="padding:16px;">
         <form id="adForm" onsubmit="saveAd(event)">
-          <input type="text" id="adProduct" placeholder="Proizvod (npr. Domaći med)" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-          <div style="display:flex; gap:8px; margin-bottom:10px;">
-            <input type="text" id="adPrice" placeholder="Cijena" required style="flex:1; padding:12px; border:1px solid #ddd; border-radius:8px;">
-            <select id="adUnit" style="width:100px; padding:12px; border:1px solid #ddd; border-radius:8px;">
-              <option value="kg">kg</option>
-              <option value="l">litar</option>
-              <option value="kom">komad</option>
-            </select>
-          </div>
-          <input type="text" id="adQty" placeholder="Količina (npr. 5 kg)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-          <input type="text" id="adCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-          <select id="adCategory" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-            <option value="">Kategorija</option>
+          <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Naslov oglasa</label>
+          <input type="text" id="adProduct" placeholder="Domaći Med" required style="width:100%; padding:14px; margin-bottom:14px; border:1px solid #ddd; border-radius:10px; font-size:16px;">
+
+          <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Kategorija</label>
+          <select id="adCategory" style="width:100%; padding:14px; margin-bottom:14px; border:1px solid #ddd; border-radius:10px; font-size:16px; background:white;">
+            <option value="">Odaberi kategoriju</option>
             <option>Voće</option>
             <option>Povrće</option>
             <option>Mlijeko</option>
@@ -97,9 +119,34 @@
             <option>Jaja</option>
             <option>Ostalo</option>
           </select>
-          <textarea id="adDesc" placeholder="Opis proizvoda" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px; height:100px;"></textarea>
-          <input type="file" id="adPhotos" accept="image/*" multiple style="margin-bottom:12px;">
-          <button type="submit" class="btn-green" id="adSubmitBtn">Objavi oglas</button>
+
+          <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Cijena (KM)</label>
+          <div style="display:flex; gap:8px; margin-bottom:14px;">
+            <input type="text" id="adPrice" placeholder="20" required style="flex:1; padding:14px; border:1px solid #ddd; border-radius:10px; font-size:16px;">
+            <select id="adUnit" style="width:100px; padding:14px; border:1px solid #ddd; border-radius:10px; font-size:16px;">
+              <option value="kg">kg</option>
+              <option value="l">litar</option>
+              <option value="kom">komad</option>
+            </select>
+          </div>
+
+          <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Količina</label>
+          <input type="text" id="adQty" placeholder="npr. 5 kg" style="width:100%; padding:14px; margin-bottom:14px; border:1px solid #ddd; border-radius:10px; font-size:16px;">
+
+          <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Grad</label>
+          <input type="text" id="adCity" placeholder="Grad" style="width:100%; padding:14px; margin-bottom:14px; border:1px solid #ddd; border-radius:10px; font-size:16px;">
+
+          <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Opis</label>
+          <textarea id="adDesc" placeholder="Opis proizvoda" style="width:100%; padding:14px; margin-bottom:8px; border:1px solid #ddd; border-radius:10px; height:100px; font-size:15px;"></textarea>
+
+          <div class="photo-upload" onclick="document.getElementById('adPhotos').click()">
+            <div class="cam-icon">📷</div>
+            <p>Dodaj fotografije</p>
+            <input type="file" id="adPhotos" accept="image/*" multiple style="display:none;" onchange="previewPhotos(this)">
+          </div>
+          <div id="photo-preview" style="display:flex; gap:8px; overflow-x:auto; margin-bottom:16px;"></div>
+
+          <button type="submit" class="btn-green" id="adSubmitBtn" style="width:100%; padding:14px; font-size:16px;">Spremi</button>
         </form>
       </div>
     </div>
@@ -302,6 +349,7 @@
     let confirmationResult = null;
     let pendingUserData = null;
     let recaptchaVerifier = null;
+    let selectedPhotos = [];
 
     const CITY_COORDS = {
       "sarajevo": [43.8563, 18.4131],
@@ -370,15 +418,7 @@
       "koln": [50.9375, 6.9603],
       "stuttgart": [48.7758, 9.1829],
       "düsseldorf": [51.2277, 6.7735],
-      "dusseldorf": [51.2277, 6.7735],
-      "dortmund": [51.5136, 7.4653],
-      "essen": [51.4556, 7.0116],
-      "leipzig": [51.3397, 12.3731],
-      "bremen": [53.0793, 8.8017],
-      "dresden": [51.0504, 13.7373],
-      "hannover": [52.3759, 9.7320],
-      "nürnberg": [49.4521, 11.0767],
-      "nurnberg": [49.4521, 11.0767]
+      "dusseldorf": [51.2277, 6.7735]
     };
 
     const REPORT_REASONS = [
@@ -552,6 +592,31 @@
     function closeConfirm() {
       document.getElementById("confirmModal").style.display = "none";
       confirmCallback = null;
+    }
+
+    function showSuccessCheck() {
+      const check = document.createElement("div");
+      check.className = "success-check";
+      check.innerHTML = "✓";
+      document.body.appendChild(check);
+      setTimeout(() => check.remove(), 2000);
+    }
+
+    function previewPhotos(input) {
+      const preview = document.getElementById("photo-preview");
+      preview.innerHTML = "";
+      selectedPhotos = [];
+      Array.from(input.files).forEach(file => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          selectedPhotos.push(reader.result);
+          const img = document.createElement("img");
+          img.src = reader.result;
+          img.style.cssText = "width:70px;height:70px;object-fit:cover;border-radius:8px;flex-shrink:0;";
+          preview.appendChild(img);
+        };
+        reader.readAsDataURL(file);
+      });
     }
 
     function loadAds() {
@@ -804,7 +869,6 @@
       const city = document.getElementById("adCity").value.trim();
       const category = document.getElementById("adCategory").value;
       const desc = document.getElementById("adDesc").value.trim();
-      const photoInput = document.getElementById("adPhotos");
       const user = getUser();
       if (!user) return showConfirm("Greška", "Morate biti prijavljeni", () => {});
 
@@ -837,22 +901,19 @@
           ? db.collection("ads").doc(editingAdId).set(ad, { merge: true })
           : db.collection("ads").add(ad);
         promise.then(() => {
-          showConfirm("Oglas aktivan", "Vaš oglas je uspješno objavljen i aktivan.", () => {});
+          showSuccessCheck();
           document.getElementById("adForm").reset();
+          document.getElementById("photo-preview").innerHTML = "";
+          selectedPhotos = [];
           editingAdId = null;
           document.getElementById("add-title").textContent = "Dodaj oglas";
-          document.getElementById("adSubmitBtn").textContent = "Objavi oglas";
-          showScreen("myads");
+          document.getElementById("adSubmitBtn").textContent = "Spremi";
+          setTimeout(() => showScreen("myads"), 2100);
         });
       }
 
-      if (photoInput.files.length) {
-        const promises = Array.from(photoInput.files).map(file => new Promise(resolve => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.readAsDataURL(file);
-        }));
-        Promise.all(promises).then(upload);
+      if (selectedPhotos.length) {
+        upload(selectedPhotos);
       } else {
         upload([]);
       }
