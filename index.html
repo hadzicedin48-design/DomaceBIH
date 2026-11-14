@@ -28,7 +28,6 @@
       cursor: pointer;
       background: #f9fff9;
     }
-    .photo-upload:hover { background: #f0fff0; }
     .photo-upload .cam-icon { font-size: 36px; color: #1a5c2e; margin-bottom: 8px; }
     .photo-upload p { color: #1a5c2e; font-weight: 500; margin: 0; }
 
@@ -46,6 +45,33 @@
     @keyframes popIn {
       from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
       to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 16px;
+    }
+    .cat-card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      cursor: pointer;
+      text-align: center;
+    }
+    .cat-card img {
+      width: 100%;
+      height: 110px;
+      object-fit: cover;
+    }
+    .cat-card span {
+      display: block;
+      padding: 10px 8px;
+      font-weight: 600;
+      color: #1a5c2e;
+      font-size: 15px;
     }
   </style>
 </head>
@@ -239,13 +265,31 @@
 
     <div class="screen" id="screen-categories" style="display:none;">
       <header><div class="logo-small">Kategorije</div></header>
-      <div class="menu-list" style="margin:12px;">
-        <div class="menu-item" onclick="setCategory('Voće'); showScreen('home', document.querySelector('.nav-item'))">🍎 Voće</div>
-        <div class="menu-item" onclick="setCategory('Povrće'); showScreen('home', document.querySelector('.nav-item'))">🥕 Povrće</div>
-        <div class="menu-item" onclick="setCategory('Mlijeko'); showScreen('home', document.querySelector('.nav-item'))">🥛 Mlijeko</div>
-        <div class="menu-item" onclick="setCategory('Meso'); showScreen('home', document.querySelector('.nav-item'))">🥩 Meso</div>
-        <div class="menu-item" onclick="setCategory('Jaja'); showScreen('home', document.querySelector('.nav-item'))">🥚 Jaja</div>
-        <div class="menu-item" onclick="setCategory('Ostalo'); showScreen('home', document.querySelector('.nav-item'))">📦 Ostalo</div>
+      <div class="categories-grid">
+        <div class="cat-card" onclick="setCategory('Voće'); showScreen('home', document.querySelector('.nav-item'))">
+          <img src="https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400&h=300&fit=crop" alt="Voće">
+          <span>Voće</span>
+        </div>
+        <div class="cat-card" onclick="setCategory('Povrće'); showScreen('home', document.querySelector('.nav-item'))">
+          <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop" alt="Povrće">
+          <span>Povrće</span>
+        </div>
+        <div class="cat-card" onclick="setCategory('Mlijeko'); showScreen('home', document.querySelector('.nav-item'))">
+          <img src="https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&h=300&fit=crop" alt="Mlijeko">
+          <span>Mlijeko</span>
+        </div>
+        <div class="cat-card" onclick="setCategory('Meso'); showScreen('home', document.querySelector('.nav-item'))">
+          <img src="https://images.unsplash.com/photo-1603048297172-c92544798d5a?w=400&h=300&fit=crop" alt="Meso">
+          <span>Meso</span>
+        </div>
+        <div class="cat-card" onclick="setCategory('Jaja'); showScreen('home', document.querySelector('.nav-item'))">
+          <img src="https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400&h=300&fit=crop" alt="Jaja">
+          <span>Jaja</span>
+        </div>
+        <div class="cat-card" onclick="setCategory('Ostalo'); showScreen('home', document.querySelector('.nav-item'))">
+          <img src="https://images.unsplash.com/photo-1606923829579-0cb981a83e2e?w=400&h=300&fit=crop" alt="Ostalo">
+          <span>Ostalo</span>
+        </div>
       </div>
     </div>
 
@@ -350,76 +394,7 @@
     let pendingUserData = null;
     let recaptchaVerifier = null;
     let selectedPhotos = [];
-
-    const CITY_COORDS = {
-      "sarajevo": [43.8563, 18.4131],
-      "banja luka": [44.7722, 17.1910],
-      "tuzla": [44.5384, 18.6671],
-      "mostar": [43.3438, 17.8078],
-      "zenica": [44.2039, 17.9077],
-      "bihać": [44.8169, 15.8708],
-      "bihac": [44.8169, 15.8708],
-      "cazin": [44.9667, 15.9333],
-      "velika kladuša": [45.1833, 15.8000],
-      "velika kladusa": [45.1833, 15.8000],
-      "prijedor": [44.9794, 16.7142],
-      "doboj": [44.7319, 18.0878],
-      "bijeljina": [44.7567, 19.2144],
-      "brčko": [44.8694, 18.8103],
-      "brcko": [44.8694, 18.8103],
-      "trebinje": [42.7119, 18.3436],
-      "livno": [43.8269, 17.0078],
-      "bugojno": [44.0572, 17.4508],
-      "visoko": [43.9889, 18.1781],
-      "goražde": [43.6675, 18.9756],
-      "gorazde": [43.6675, 18.9756],
-      "konjic": [43.6519, 17.9608],
-      "travnik": [44.2264, 17.6658],
-      "jablanica": [43.6603, 17.7614],
-      "čapljina": [43.1142, 17.7019],
-      "capljina": [43.1142, 17.7019],
-      "gradačac": [44.8783, 18.4256],
-      "gradacac": [44.8783, 18.4256],
-      "zavidovići": [44.4458, 18.1497],
-      "zavidovici": [44.4458, 18.1497],
-      "lukavac": [44.5381, 18.5306],
-      "kakanj": [44.1331, 18.1222],
-      "tešanj": [44.6131, 17.9856],
-      "tesanj": [44.6131, 17.9856],
-      "srebrenik": [44.7047, 18.4883],
-      "živinice": [44.4492, 18.6497],
-      "zivinice": [44.4492, 18.6497],
-      "bužim": [45.0667, 16.0333],
-      "buzim": [45.0667, 16.0333],
-      "bosanska krupa": [44.8833, 16.1500],
-      "krupa": [44.8833, 16.1500],
-      "vrhnika": [45.9644, 14.2947],
-      "ljubljana": [46.0569, 14.5058],
-      "maribor": [46.5547, 15.6459],
-      "celje": [46.2361, 15.2675],
-      "koper": [45.5469, 13.7294],
-      "zagreb": [45.8150, 15.9819],
-      "split": [43.5081, 16.4402],
-      "rijeka": [45.3271, 14.4422],
-      "osijek": [45.5550, 18.6955],
-      "beč": [48.2082, 16.3738],
-      "bec": [48.2082, 16.3738],
-      "vienna": [48.2082, 16.3738],
-      "graz": [47.0707, 15.4395],
-      "linz": [48.3069, 14.2858],
-      "salzburg": [47.8095, 13.0550],
-      "innsbruck": [47.2692, 11.4041],
-      "berlin": [52.5200, 13.4050],
-      "minhen": [48.1351, 11.5820],
-      "munich": [48.1351, 11.5820],
-      "frankfurt": [50.1109, 8.6821],
-      "hamburg": [53.5511, 9.9937],
-      "köln": [50.9375, 6.9603],
-      "koln": [50.9375, 6.9603],
-      "stuttgart": [48.7758, 9.1829],
-      "düsseldorf": [51.2277, 6.7735],
-      "dusseldorf": [51.2277, 6.7735]
-    };
+    let cityCache = {};
 
     const REPORT_REASONS = [
       "Nije domaći proizvod",
@@ -475,10 +450,21 @@
       showMyLocation();
     }
 
-    function getCityCoords(city) {
+    async function geocodeCity(city) {
       if (!city) return null;
       const key = city.toLowerCase().trim();
-      return CITY_COORDS[key] || null;
+      if (cityCache[key]) return cityCache[key];
+
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
+        const data = await res.json();
+        if (data && data[0]) {
+          const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+          cityCache[key] = coords;
+          return coords;
+        }
+      } catch (e) {}
+      return null;
     }
 
     function toggleMap() {
@@ -629,27 +615,29 @@
       });
     }
 
-    function updateMapMarkers() {
+    async function updateMapMarkers() {
       if (!map) return;
       markers.forEach(m => map.removeLayer(m));
       markers = [];
-      allAds.forEach(ad => {
-        const coords = getCityCoords(ad.city);
+
+      for (const ad of allAds) {
+        if (!ad.city) continue;
+        const coords = await geocodeCity(ad.city);
         if (coords) {
           const iconHtml = ad.photos && ad.photos[0] 
-            ? `<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid #1a5c2e;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><img src="${ad.photos[0]}" style="width:100%;height:100%;object-fit:cover;"></div>`
-            : `<div style="width:40px;height:40px;border-radius:50%;background:#1a5c2e;color:white;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;">📍</div>`;
+            ? `<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:3px solid #1a5c2e;box-shadow:0 2px 8px rgba(0,0,0,0.4);"><img src="${ad.photos[0]}" style="width:100%;height:100%;object-fit:cover;"></div>`
+            : `<div style="width:44px;height:44px;border-radius:50%;background:#1a5c2e;color:white;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid white;">📍</div>`;
           const icon = L.divIcon({
             html: iconHtml,
             className: "",
-            iconSize: [40, 40],
-            iconAnchor: [20, 20]
+            iconSize: [44, 44],
+            iconAnchor: [22, 22]
           });
           const marker = L.marker(coords, { icon }).addTo(map);
           marker.on("click", () => openAd(ad.id));
           markers.push(marker);
         }
-      });
+      }
     }
 
     function listenForUnread() {
@@ -968,7 +956,7 @@
 
     function renderHomeProducts() {
       const container = document.getElementById("home-products");
-      const search = (document.getElementById("search-input")?.value || "").toLowerCase();
+      const search = (document.getElementById("search-input")?.value || "").toLowerCase().trim();
       let filtered = allAds.filter(a => a.status !== "Prodano");
       if (currentCategory !== "Sve") {
         filtered = filtered.filter(a => a.category === currentCategory);
@@ -978,8 +966,10 @@
       }
       if (search) {
         filtered = filtered.filter(a => 
-          a.product.toLowerCase().includes(search) || 
-          (a.city || "").toLowerCase().includes(search)
+          (a.product || "").toLowerCase().includes(search) || 
+          (a.city || "").toLowerCase().includes(search) ||
+          (a.desc || "").toLowerCase().includes(search) ||
+          (a.category || "").toLowerCase().includes(search)
         );
       }
       if (currentSort === "newest") {
