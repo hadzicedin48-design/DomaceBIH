@@ -28,6 +28,7 @@
       cursor: pointer;
       background: #f9fff9;
     }
+    .photo-upload:hover { background: #f0fff0; }
     .photo-upload .cam-icon { font-size: 36px; color: #1a5c2e; margin-bottom: 8px; }
     .photo-upload p { color: #1a5c2e; font-weight: 500; margin: 0; }
 
@@ -45,33 +46,6 @@
     @keyframes popIn {
       from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
       to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    }
-
-    .categories-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      padding: 16px;
-    }
-    .cat-card {
-      background: white;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      cursor: pointer;
-      text-align: center;
-    }
-    .cat-card img {
-      width: 100%;
-      height: 110px;
-      object-fit: cover;
-    }
-    .cat-card span {
-      display: block;
-      padding: 10px 8px;
-      font-weight: 600;
-      color: #1a5c2e;
-      font-size: 15px;
     }
   </style>
 </head>
@@ -159,8 +133,8 @@
           <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Količina</label>
           <input type="text" id="adQty" placeholder="npr. 5 kg" style="width:100%; padding:14px; margin-bottom:14px; border:1px solid #ddd; border-radius:10px; font-size:16px;">
 
-          <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Grad</label>
-          <input type="text" id="adCity" placeholder="Grad" style="width:100%; padding:14px; margin-bottom:14px; border:1px solid #ddd; border-radius:10px; font-size:16px;">
+          <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Grad / Naselje</label>
+          <input type="text" id="adCity" placeholder="Grad ili selo" style="width:100%; padding:14px; margin-bottom:14px; border:1px solid #ddd; border-radius:10px; font-size:16px;">
 
           <label style="font-size:13px; color:#555; margin-bottom:4px; display:block;">Opis</label>
           <textarea id="adDesc" placeholder="Opis proizvoda" style="width:100%; padding:14px; margin-bottom:8px; border:1px solid #ddd; border-radius:10px; height:100px; font-size:15px;"></textarea>
@@ -265,31 +239,13 @@
 
     <div class="screen" id="screen-categories" style="display:none;">
       <header><div class="logo-small">Kategorije</div></header>
-      <div class="categories-grid">
-        <div class="cat-card" onclick="setCategory('Voće'); showScreen('home', document.querySelector('.nav-item'))">
-          <img src="https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400&h=300&fit=crop" alt="Voće">
-          <span>Voće</span>
-        </div>
-        <div class="cat-card" onclick="setCategory('Povrće'); showScreen('home', document.querySelector('.nav-item'))">
-          <img src="https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400&h=300&fit=crop" alt="Povrće">
-          <span>Povrće</span>
-        </div>
-        <div class="cat-card" onclick="setCategory('Mlijeko'); showScreen('home', document.querySelector('.nav-item'))">
-          <img src="https://images.unsplash.com/photo-1550583724-b2692b85b150?w=400&h=300&fit=crop" alt="Mlijeko">
-          <span>Mlijeko</span>
-        </div>
-        <div class="cat-card" onclick="setCategory('Meso'); showScreen('home', document.querySelector('.nav-item'))">
-          <img src="https://images.unsplash.com/photo-1603048297172-c92544798d5a?w=400&h=300&fit=crop" alt="Meso">
-          <span>Meso</span>
-        </div>
-        <div class="cat-card" onclick="setCategory('Jaja'); showScreen('home', document.querySelector('.nav-item'))">
-          <img src="https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400&h=300&fit=crop" alt="Jaja">
-          <span>Jaja</span>
-        </div>
-        <div class="cat-card" onclick="setCategory('Ostalo'); showScreen('home', document.querySelector('.nav-item'))">
-          <img src="https://images.unsplash.com/photo-1606923829579-0cb981a83e2e?w=400&h=300&fit=crop" alt="Ostalo">
-          <span>Ostalo</span>
-        </div>
+      <div class="menu-list" style="margin:12px;">
+        <div class="menu-item" onclick="setCategory('Voće'); showScreen('home', document.querySelector('.nav-item'))">🍎 Voće</div>
+        <div class="menu-item" onclick="setCategory('Povrće'); showScreen('home', document.querySelector('.nav-item'))">🥕 Povrće</div>
+        <div class="menu-item" onclick="setCategory('Mlijeko'); showScreen('home', document.querySelector('.nav-item'))">🥛 Mlijeko</div>
+        <div class="menu-item" onclick="setCategory('Meso'); showScreen('home', document.querySelector('.nav-item'))">🥩 Meso</div>
+        <div class="menu-item" onclick="setCategory('Jaja'); showScreen('home', document.querySelector('.nav-item'))">🥚 Jaja</div>
+        <div class="menu-item" onclick="setCategory('Ostalo'); showScreen('home', document.querySelector('.nav-item'))">📦 Ostalo</div>
       </div>
     </div>
 
@@ -347,19 +303,9 @@
         <input type="password" id="inputPassword" placeholder="Lozinka" required style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <input type="text" id="inputName" placeholder="Ime i prezime" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <input type="text" id="inputCity" placeholder="Grad" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
-        <input type="tel" id="inputPhone" placeholder="Broj telefona (+387, +386...)" style="width:100%; padding:12px; margin-bottom:4px; border:1px solid #ddd; border-radius:8px;">
-        <p style="font-size:12px; color:#777; margin-bottom:10px;">Unesi broj sa pozivnim brojem (npr. +387, +386, +385, +43, +49)</p>
+        <input type="tel" id="inputPhone" placeholder="Broj telefona (opcionalno)" style="width:100%; padding:12px; margin-bottom:10px; border:1px solid #ddd; border-radius:8px;">
         <button type="submit" class="btn-green">Potvrdi</button>
       </form>
-    </div>
-  </div>
-
-  <div class="modal" id="smsModal">
-    <div class="modal-content" style="text-align:center;">
-      <h2>Unesi SMS kod</h2>
-      <p style="margin-bottom:12px; color:#555;">Poslali smo kod na tvoj broj</p>
-      <input type="text" id="smsCode" placeholder="Kod" style="width:100%; padding:12px; margin-bottom:12px; border:1px solid #ddd; border-radius:8px; text-align:center;">
-      <button onclick="verifySmsCode()" class="btn-green">Potvrdi</button>
     </div>
   </div>
 
@@ -390,9 +336,6 @@
     let screenHistory = ["home"];
     let mapVisible = false;
     let currentUser = null;
-    let confirmationResult = null;
-    let pendingUserData = null;
-    let recaptchaVerifier = null;
     let selectedPhotos = [];
     let cityCache = {};
 
@@ -450,13 +393,13 @@
       showMyLocation();
     }
 
-    async function geocodeCity(city) {
+    async function getCityCoords(city) {
       if (!city) return null;
       const key = city.toLowerCase().trim();
       if (cityCache[key]) return cityCache[key];
 
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city + ", Bosnia and Herzegovina")}&limit=1`);
         const data = await res.json();
         if (data && data[0]) {
           const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
@@ -619,19 +562,17 @@
       if (!map) return;
       markers.forEach(m => map.removeLayer(m));
       markers = [];
-
       for (const ad of allAds) {
-        if (!ad.city) continue;
-        const coords = await geocodeCity(ad.city);
+        const coords = await getCityCoords(ad.city);
         if (coords) {
           const iconHtml = ad.photos && ad.photos[0] 
-            ? `<div style="width:44px;height:44px;border-radius:50%;overflow:hidden;border:3px solid #1a5c2e;box-shadow:0 2px 8px rgba(0,0,0,0.4);"><img src="${ad.photos[0]}" style="width:100%;height:100%;object-fit:cover;"></div>`
-            : `<div style="width:44px;height:44px;border-radius:50%;background:#1a5c2e;color:white;display:flex;align-items:center;justify-content:center;font-size:20px;border:3px solid white;">📍</div>`;
+            ? `<div style="width:40px;height:40px;border-radius:50%;overflow:hidden;border:2px solid #1a5c2e;box-shadow:0 2px 6px rgba(0,0,0,0.3);"><img src="${ad.photos[0]}" style="width:100%;height:100%;object-fit:cover;"></div>`
+            : `<div style="width:40px;height:40px;border-radius:50%;background:#1a5c2e;color:white;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid white;">📍</div>`;
           const icon = L.divIcon({
             html: iconHtml,
             className: "",
-            iconSize: [44, 44],
-            iconAnchor: [22, 22]
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
           });
           const marker = L.marker(coords, { icon }).addTo(map);
           marker.on("click", () => openAd(ad.id));
@@ -966,10 +907,9 @@
       }
       if (search) {
         filtered = filtered.filter(a => 
-          (a.product || "").toLowerCase().includes(search) || 
-          (a.city || "").toLowerCase().includes(search) ||
-          (a.desc || "").toLowerCase().includes(search) ||
-          (a.category || "").toLowerCase().includes(search)
+          a.product.toLowerCase().startsWith(search) || 
+          a.product.toLowerCase().includes(search) ||
+          (a.city || "").toLowerCase().includes(search)
         );
       }
       if (currentSort === "newest") {
@@ -1393,66 +1333,25 @@
       if (!email || !password) return showConfirm("Greška", "Unesite email i lozinku", () => {});
 
       if (isRegisterMode) {
-        if (!phone) return showConfirm("Greška", "Unesite broj telefona", () => {});
-        pendingUserData = { email, password, name, city, phone };
-        sendSmsCode(phone);
+        auth.createUserWithEmailAndPassword(email, password)
+          .then(cred => {
+            return db.collection("users").doc(cred.user.uid).set({
+              email: email,
+              name: name || email,
+              city: city,
+              phone: phone
+            });
+          })
+          .then(() => {
+            closeModal();
+            showConfirm("Uspjeh", "Registracija je uspješna!", () => {});
+          })
+          .catch(err => showConfirm("Greška", err.message, () => {}));
       } else {
         auth.signInWithEmailAndPassword(email, password)
           .then(() => closeModal())
           .catch(err => showConfirm("Greška", err.message, () => {}));
       }
-    }
-
-    function sendSmsCode(phone) {
-      const oldContainer = document.getElementById("recaptcha-container");
-      if (oldContainer) {
-        oldContainer.remove();
-      }
-      
-      const newContainer = document.createElement("div");
-      newContainer.id = "recaptcha-container";
-      document.getElementById("authForm").appendChild(newContainer);
-      
-      if (recaptchaVerifier) {
-        try { recaptchaVerifier.clear(); } catch(e) {}
-        recaptchaVerifier = null;
-      }
-      
-      recaptchaVerifier = new firebase.auth.RecaptchaVerifier("recaptcha-container", { 
-        size: "invisible"
-      });
-      
-      auth.signInWithPhoneNumber(phone, recaptchaVerifier)
-        .then(result => {
-          confirmationResult = result;
-          document.getElementById("smsModal").style.display = "flex";
-        })
-        .catch(err => showConfirm("Greška", err.message, () => {}));
-    }
-
-    function verifySmsCode() {
-      const code = document.getElementById("smsCode").value.trim();
-      if (!code || !confirmationResult) return;
-      confirmationResult.confirm(code)
-        .then(result => {
-          const user = result.user;
-          return db.collection("users").doc(user.uid).set({
-            email: pendingUserData.email,
-            name: pendingUserData.name || pendingUserData.email,
-            city: pendingUserData.city,
-            phone: pendingUserData.phone
-          }).then(() => {
-            return user.updateEmail(pendingUserData.email).then(() => {
-              return user.updatePassword(pendingUserData.password);
-            });
-          });
-        })
-        .then(() => {
-          document.getElementById("smsModal").style.display = "none";
-          closeModal();
-          showConfirm("Uspjeh", "Registracija je uspješna!", () => {});
-        })
-        .catch(err => showConfirm("Greška", "Pogrešan kod ili greška: " + err.message, () => {}));
     }
 
     function editProfile() {
