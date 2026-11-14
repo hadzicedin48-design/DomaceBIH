@@ -47,6 +47,25 @@
       from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
       to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      padding: 16px;
+    }
+    .category-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px 12px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      cursor: pointer;
+      border: 1px solid #eee;
+    }
+    .category-card:active { background: #f5f5f5; }
+    .category-card .icon { font-size: 36px; margin-bottom: 8px; }
+    .category-card .name { font-size: 15px; font-weight: 500; color: #333; }
   </style>
 </head>
 <body>
@@ -239,13 +258,31 @@
 
     <div class="screen" id="screen-categories" style="display:none;">
       <header><div class="logo-small">Kategorije</div></header>
-      <div class="menu-list" style="margin:12px;">
-        <div class="menu-item" onclick="setCategory('Voće'); showScreen('home', document.querySelector('.nav-item'))">🍎 Voće</div>
-        <div class="menu-item" onclick="setCategory('Povrće'); showScreen('home', document.querySelector('.nav-item'))">🥕 Povrće</div>
-        <div class="menu-item" onclick="setCategory('Mlijeko'); showScreen('home', document.querySelector('.nav-item'))">🥛 Mlijeko</div>
-        <div class="menu-item" onclick="setCategory('Meso'); showScreen('home', document.querySelector('.nav-item'))">🥩 Meso</div>
-        <div class="menu-item" onclick="setCategory('Jaja'); showScreen('home', document.querySelector('.nav-item'))">🥚 Jaja</div>
-        <div class="menu-item" onclick="setCategory('Ostalo'); showScreen('home', document.querySelector('.nav-item'))">📦 Ostalo</div>
+      <div class="categories-grid">
+        <div class="category-card" onclick="setCategory('Voće'); showScreen('home', document.querySelector('.nav-item'))">
+          <div class="icon">🍎</div>
+          <div class="name">Voće</div>
+        </div>
+        <div class="category-card" onclick="setCategory('Povrće'); showScreen('home', document.querySelector('.nav-item'))">
+          <div class="icon">🥕</div>
+          <div class="name">Povrće</div>
+        </div>
+        <div class="category-card" onclick="setCategory('Mlijeko'); showScreen('home', document.querySelector('.nav-item'))">
+          <div class="icon">🥛</div>
+          <div class="name">Mlijeko</div>
+        </div>
+        <div class="category-card" onclick="setCategory('Meso'); showScreen('home', document.querySelector('.nav-item'))">
+          <div class="icon">🥩</div>
+          <div class="name">Meso</div>
+        </div>
+        <div class="category-card" onclick="setCategory('Jaja'); showScreen('home', document.querySelector('.nav-item'))">
+          <div class="icon">🥚</div>
+          <div class="name">Jaja</div>
+        </div>
+        <div class="category-card" onclick="setCategory('Ostalo'); showScreen('home', document.querySelector('.nav-item'))">
+          <div class="icon">📦</div>
+          <div class="name">Ostalo</div>
+        </div>
       </div>
     </div>
 
@@ -464,6 +501,10 @@
       currentCategory = cat;
       document.querySelectorAll("#home-filters .chip").forEach(c => c.classList.remove("active"));
       if (el) el.classList.add("active");
+      const chips = document.querySelectorAll("#home-filters .chip");
+      chips.forEach(chip => {
+        if (chip.textContent === cat) chip.classList.add("active");
+      });
       renderHomeProducts();
     }
 
