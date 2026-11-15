@@ -15,57 +15,32 @@
   <style>
     body.dark { background: #121212 !important; color: #eee !important; }
     body.dark .screen { background: #1e1e1e; color: #eee; }
-    body.dark .menu-item, body.dark .product-card, body.dark .profile-box { background: #2a2a2a; color: #eee; }
+    body.dark .menu-item, body.dark .product-card, body.dark .profile-box, body.dark .category-card { background: #2a2a2a; color: #eee; }
     body.dark header { background: #0d3d1f; }
     body.dark .bottom-nav { background: #1e1e1e; }
 
-    .photo-upload {
-      border: 2px dashed #1a5c2e;
-      border-radius: 16px;
-      padding: 30px 16px;
-      text-align: center;
-      margin: 16px 0;
-      cursor: pointer;
-      background: #f9fff9;
-    }
+    .photo-upload { border: 2px dashed #1a5c2e; border-radius: 16px; padding: 30px 16px; text-align: center; margin: 16px 0; cursor: pointer; background: #f9fff9; }
     .photo-upload:hover { background: #f0fff0; }
     .photo-upload .cam-icon { font-size: 36px; color: #1a5c2e; margin-bottom: 8px; }
     .photo-upload p { color: #1a5c2e; font-weight: 500; margin: 0; }
 
-    .success-check {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 80px;
-      color: #1a5c2e;
-      z-index: 9999;
-      animation: popIn 0.3s ease;
-      pointer-events: none;
-    }
-    @keyframes popIn {
-      from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-      to { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-    }
+    .success-check { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; color: #1a5c2e; z-index: 9999; animation: popIn 0.3s ease; pointer-events: none; }
+    @keyframes popIn { from { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } to { transform: translate(-50%, -50%) scale(1); opacity: 1; } }
 
-    .categories-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
-      padding: 16px;
-    }
-    .category-card {
-      background: white;
-      border-radius: 16px;
-      padding: 24px 12px;
-      text-align: center;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      cursor: pointer;
-      border: 1px solid #eee;
-    }
+    .categories-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 16px; }
+    .category-card { background: white; border-radius: 16px; padding: 24px 12px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.08); cursor: pointer; border: 1px solid #eee; }
     .category-card:active { background: #f5f5f5; }
     .category-card .icon { font-size: 36px; margin-bottom: 8px; }
     .category-card .name { font-size: 15px; font-weight: 500; color: #333; }
+
+    .lang-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid #eee; cursor: pointer; }
+    .lang-item:active { background: #f5f5f5; }
+    .lang-item .flag { font-size: 24px; }
+    .lang-item.active { background: #e8f5e9; }
+
+    .stars { color: #ffc107; font-size: 18px; }
+    .stars span { cursor: pointer; }
+    .stars span:hover { color: #ff9800; }
   </style>
 </head>
 <body>
@@ -81,6 +56,7 @@
     <div class="screen" id="screen-home">
       <header><div class="logo-small">DOMAĆE</div></header>
       <div class="search-bar"><input type="text" id="search-input" placeholder="Pretraži proizvode" oninput="renderHomeProducts()"></div>
+      <div id="search-history" style="display:none; background:white; padding:8px 12px; font-size:13px; color:#777;"></div>
       <div class="filters" id="home-filters">
         <button class="chip active" onclick="setCategory('Sve', this)">Sve</button>
         <button class="chip" onclick="setCategory('Voće', this)">Voće</button>
@@ -89,10 +65,24 @@
         <button class="chip" onclick="setCategory('Meso', this)">Meso</button>
         <button class="chip" onclick="setCategory('Jaja', this)">Jaja</button>
       </div>
-      <div style="padding:8px 12px; background:#fff; display:flex; gap:8px; overflow-x:auto; align-items:center;">
+      <div style="padding:8px 12px; background:#fff; display:flex; gap:8px; overflow-x:auto; align-items:center; flex-wrap:wrap;">
         <button class="chip" id="map-btn" onclick="toggleMap()">🗺️ Mapa</button>
         <button class="chip active" id="newest-btn" onclick="setSort('newest', this)">Najnoviji</button>
         <button class="chip" id="available-btn" onclick="setSort('available', this)">Samo dostupni</button>
+        <select id="price-filter" onchange="renderHomeProducts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:20px; font-size:13px;">
+          <option value="">Cijena</option>
+          <option value="0-10">0-10 KM</option>
+          <option value="10-50">10-50 KM</option>
+          <option value="50-100">50-100 KM</option>
+          <option value="100+">100+ KM</option>
+        </select>
+        <select id="distance-filter" onchange="renderHomeProducts()" style="padding:6px 10px; border:1px solid #ddd; border-radius:20px; font-size:13px;">
+          <option value="">Udaljenost</option>
+          <option value="10">Do 10 km</option>
+          <option value="25">Do 25 km</option>
+          <option value="50">Do 50 km</option>
+          <option value="100">Do 100 km</option>
+        </select>
       </div>
       <div id="map" style="height:0px; overflow:hidden; transition:height 0.3s;"></div>
       <div class="section-title">Najbliži proizvodi</div>
@@ -103,19 +93,24 @@
       <header style="display:flex; justify-content:space-between; align-items:center; padding:14px 16px;">
         <div style="display:flex; align-items:center; gap:10px;">
           <span id="back-arrow" style="font-size:24px; cursor:pointer; display:none;" onclick="goBack()">←</span>
-          <div class="logo-small">Profil</div>
+          <div class="logo-small" id="profile-title">Profil</div>
         </div>
         <div style="display:flex; align-items:center; gap:12px;">
-          <span id="views-icon" style="font-size:22px; cursor:pointer; display:none; position:relative;" onclick="showProfileViews()">
-            👁️
-            <span id="views-badge" style="display:none; position:absolute; top:-6px; right:-8px; background:#e53935; color:white; border-radius:10px; font-size:10px; min-width:16px; height:16px; line-height:16px; text-align:center;">0</span>
-          </span>
+          <span id="views-icon" style="font-size:22px; cursor:pointer; display:none; position:relative;" onclick="showProfileViews()">👁️<span id="views-badge" style="display:none; position:absolute; top:-6px; right:-8px; background:#e53935; color:white; border-radius:10px; font-size:10px; min-width:16px; height:16px; line-height:16px; text-align:center;">0</span></span>
           <span id="settings-icon" style="font-size:24px; cursor:pointer; display:none;" onclick="toggleSettings()">⚙️</span>
         </div>
       </header>
       <div id="profile-content"></div>
       <div id="settings-panel" style="display:none;"></div>
       <div id="views-panel" style="display:none;"></div>
+    </div>
+
+    <div class="screen" id="screen-language" style="display:none;">
+      <header style="display:flex; align-items:center; gap:10px; padding:14px 16px;">
+        <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
+        <div class="logo-small">Jezik</div>
+      </header>
+      <div id="language-list"></div>
     </div>
 
     <div class="screen" id="screen-add" style="display:none;">
@@ -177,6 +172,7 @@
         <span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span>
         <div class="logo-small" id="seller-title">Prodavač</div>
       </header>
+      <div id="seller-rating" style="padding:12px; text-align:center;"></div>
       <div id="seller-ads" style="padding:12px;"></div>
     </div>
 
@@ -260,14 +256,14 @@
     </div>
 
     <nav class="bottom-nav">
-      <div class="nav-item active" onclick="showScreen('home', this)"><div class="icon">⌂</div><div>Početna</div></div>
-      <div class="nav-item" onclick="showScreen('categories', this)"><div class="icon">▦</div><div>Kategorije</div></div>
-      <div class="nav-item" onclick="showScreen('favorites', this); renderFavorites();"><div class="icon">♥</div><div>Omiljeno</div></div>
+      <div class="nav-item active" onclick="showScreen('home', this)"><div class="icon">⌂</div><div id="nav-home">Početna</div></div>
+      <div class="nav-item" onclick="showScreen('categories', this)"><div class="icon">▦</div><div id="nav-cat">Kategorije</div></div>
+      <div class="nav-item" onclick="showScreen('favorites', this); renderFavorites();"><div class="icon">♥</div><div id="nav-fav">Omiljeno</div></div>
       <div class="nav-item" onclick="showScreen('messages', this); showMessagesList();" style="position:relative;">
-        <div class="icon">✉</div><div>Poruke</div>
+        <div class="icon">✉</div><div id="nav-msg">Poruke</div>
         <span id="msg-badge" style="display:none; position:absolute; top:2px; right:18px; background:#e53935; color:white; border-radius:10px; font-size:10px; min-width:16px; height:16px; line-height:16px; text-align:center; padding:0 4px;">0</span>
       </div>
-      <div class="nav-item" onclick="showScreen('profile', this)"><div class="icon">👤</div><div>Profil</div></div>
+      <div class="nav-item" onclick="showScreen('profile', this)"><div class="icon">👤</div><div id="nav-prof">Profil</div></div>
     </nav>
   </div>
 
@@ -276,7 +272,7 @@
       <h2 id="confirmTitle" style="margin-bottom:12px;">Potvrda</h2>
       <p id="confirmText" style="margin-bottom:20px; color:#555;"></p>
       <div style="display:flex; gap:10px;">
-        <button onclick="closeConfirm()" style="flex:1; padding:12px; background:#eee; border:none; border-radius:8px;">Odustani</button>
+        <button onclick="closeConfirm()" style="flex:1; padding:12px; background:#eee; border:none; border-radius:8px;" id="btn-cancel">Odustani</button>
         <button id="confirmBtn" class="btn-green" style="flex:1;">Potvrdi</button>
       </div>
     </div>
@@ -288,6 +284,16 @@
       <h2>Prijavi oglas</h2>
       <p style="margin-bottom:12px; color:#555;">Odaberi razlog:</p>
       <div class="menu-list" id="report-reasons"></div>
+    </div>
+  </div>
+
+  <div class="modal" id="rateModal">
+    <div class="modal-content" style="text-align:center;">
+      <h2>Ocijeni prodavača</h2>
+      <div class="stars" id="rating-stars" style="font-size:32px; margin:16px 0;">
+        <span onclick="setRating(1)">★</span><span onclick="setRating(2)">★</span><span onclick="setRating(3)">★</span><span onclick="setRating(4)">★</span><span onclick="setRating(5)">★</span>
+      </div>
+      <button onclick="submitRating()" class="btn-green">Pošalji</button>
     </div>
   </div>
 
@@ -336,26 +342,74 @@
     let selectedPhotos = [];
     let cityCache = {};
     let isUserAdmin = false;
+    let currentLang = localStorage.getItem("domaceLang") || "bs";
+    let currentRating = 0;
+    let ratingTarget = null;
+    let userLocation = null;
+
+    const LANGUAGES = {
+      bs: { flag: "🇧🇦", name: "Bosanski" },
+      hr: { flag: "🇭🇷", name: "Hrvatski" },
+      sr: { flag: "🇷🇸", name: "Српски" },
+      sl: { flag: "🇸🇮", name: "Slovenščina" },
+      de: { flag: "🇩🇪", name: "Deutsch" },
+      sq: { flag: "🇦🇱", name: "Shqip" }
+    };
+
+    const TRANSLATIONS = {
+      bs: { home: "Početna", categories: "Kategorije", favorites: "Omiljeno", messages: "Poruke", profile: "Profil", search: "Pretraži proizvode", newest: "Najnoviji", available: "Samo dostupni", price: "Cijena", distance: "Udaljenost", addAd: "Dodaj oglas", myAds: "Moji oglasi", settings: "Postavke", language: "Jezik", logout: "Odjava", login: "Prijava", register: "Registracija", welcome: "Dobrodošli", loginOrReg: "Prijavite se ili registrujte", save: "Spremi", cancel: "Odustani", confirm: "Potvrdi" },
+      hr: { home: "Početna", categories: "Kategorije", favorites: "Favoriti", messages: "Poruke", profile: "Profil", search: "Pretraži proizvode", newest: "Najnoviji", available: "Samo dostupni", price: "Cijena", distance: "Udaljenost", addAd: "Dodaj oglas", myAds: "Moji oglasi", settings: "Postavke", language: "Jezik", logout: "Odjava", login: "Prijava", register: "Registracija", welcome: "Dobrodošli", loginOrReg: "Prijavite se ili registrirajte", save: "Spremi", cancel: "Odustani", confirm: "Potvrdi" },
+      sr: { home: "Почетна", categories: "Категорије", favorites: "Омиљено", messages: "Поруке", profile: "Профил", search: "Претражи производе", newest: "Најновији", available: "Само доступни", price: "Цена", distance: "Удаљеност", addAd: "Додај оглас", myAds: "Моји огласи", settings: "Подешавања", language: "Језик", logout: "Одјава", login: "Пријава", register: "Регистрација", welcome: "Добродошли", loginOrReg: "Пријавите се или региструјте", save: "Сачувај", cancel: "Одустани", confirm: "Потврди" },
+      sl: { home: "Domov", categories: "Kategorije", favorites: "Priljubljeni", messages: "Sporočila", profile: "Profil", search: "Išči izdelke", newest: "Najnovejši", available: "Samo na voljo", price: "Cena", distance: "Razdalja", addAd: "Dodaj oglas", myAds: "Moji oglasi", settings: "Nastavitve", language: "Jezik", logout: "Odjava", login: "Prijava", register: "Registracija", welcome: "Dobrodošli", loginOrReg: "Prijavite se ali registrirajte", save: "Shrani", cancel: "Prekliči", confirm: "Potrdi" },
+      de: { home: "Startseite", categories: "Kategorien", favorites: "Favoriten", messages: "Nachrichten", profile: "Profil", search: "Produkte suchen", newest: "Neueste", available: "Nur verfügbar", price: "Preis", distance: "Entfernung", addAd: "Anzeige hinzufügen", myAds: "Meine Anzeigen", settings: "Einstellungen", language: "Sprache", logout: "Abmelden", login: "Anmelden", register: "Registrieren", welcome: "Willkommen", loginOrReg: "Anmelden oder registrieren", save: "Speichern", cancel: "Abbrechen", confirm: "Bestätigen" },
+      sq: { home: "Fillimi", categories: "Kategoritë", favorites: "Të preferuarat", messages: "Mesazhet", profile: "Profili", search: "Kërko produkte", newest: "Më të rejat", available: "Vetëm të disponueshme", price: "Çmimi", distance: "Distanca", addAd: "Shto shpallje", myAds: "Shpalljet e mia", settings: "Cilësimet", language: "Gjuha", logout: "Dil", login: "Hyr", register: "Regjistrohu", welcome: "Mirë se vini", loginOrReg: "Hyni ose regjistrohuni", save: "Ruaj", cancel: "Anulo", confirm: "Konfirmo" }
+    };
 
     const REPORT_REASONS = ["Nije domaći proizvod", "Sadrži alkohol", "Netočan opis ili cijena", "Neodgovarajuća slika", "Ponavlja se oglas", "Ostalo"];
     const ALCOHOL_WORDS = ["alkohol", "pivo", "vino", "rakija", "viski", "žestoko", "beer", "wine"];
 
+    function t(key) { return TRANSLATIONS[currentLang]?.[key] || TRANSLATIONS.bs[key] || key; }
+
+    function applyTranslations() {
+      document.getElementById("nav-home").textContent = t("home");
+      document.getElementById("nav-cat").textContent = t("categories");
+      document.getElementById("nav-fav").textContent = t("favorites");
+      document.getElementById("nav-msg").textContent = t("messages");
+      document.getElementById("nav-prof").textContent = t("profile");
+      document.getElementById("search-input").placeholder = t("search");
+      document.getElementById("newest-btn").textContent = t("newest");
+      document.getElementById("available-btn").textContent = t("available");
+      document.getElementById("btn-cancel").textContent = t("cancel");
+      document.getElementById("confirmBtn").textContent = t("confirm");
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      localStorage.setItem("domaceLang", lang);
+      applyTranslations();
+      showScreen("profile");
+      showConfirm(t("language"), LANGUAGES[lang].name, () => {});
+    }
+
+    function showLanguageScreen() {
+      const list = document.getElementById("language-list");
+      list.innerHTML = Object.keys(LANGUAGES).map(code => `
+        <div class="lang-item ${code === currentLang ? 'active' : ''}" onclick="setLanguage('${code}')">
+          <span class="flag">${LANGUAGES[code].flag}</span>
+          <span>${LANGUAGES[code].name}</span>
+          ${code === currentLang ? '<span style="margin-left:auto; color:#1a5c2e;">✓</span>' : ''}
+        </div>
+      `).join("");
+      showScreen("language");
+    }
+
     auth.onAuthStateChanged(user => {
       currentUser = user;
       if (user) {
-        db.collection("admins").doc(user.email).get().then(adminDoc => {
-          isUserAdmin = adminDoc.exists;
-        });
+        db.collection("admins").doc(user.email).get().then(adminDoc => { isUserAdmin = adminDoc.exists; });
         db.collection("users").doc(user.uid).get().then(doc => {
           if (doc.exists) {
-            localStorage.setItem("domaceUser", JSON.stringify({
-              uid: user.uid,
-              email: user.email,
-              name: doc.data().name || user.email,
-              city: doc.data().city || "",
-              phone: doc.data().phone || "",
-              photo: doc.data().photo || ""
-            }));
+            localStorage.setItem("domaceUser", JSON.stringify({ uid: user.uid, email: user.email, name: doc.data().name || user.email, city: doc.data().city || "", phone: doc.data().phone || "", photo: doc.data().photo || "" }));
           }
           renderProfile();
           listenForUnread();
@@ -374,15 +428,23 @@
       setTimeout(initMap, 300);
       loadAds();
       applyTheme();
+      applyTranslations();
+      getUserLocation();
     }, 1600);
 
     var map, currentChatWith = null, unsubscribeChat = null, allAds = [], unreadCount = 0, confirmCallback = null, profileViews = [];
 
     function initMap() {
-      map = L.map("map").setView([43.95, 17.8], 7.2);
+      map = L.map("map").setView([43.95, 17.8], 6.5);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap" }).addTo(map);
       setTimeout(() => map.invalidateSize(), 400);
       showMyLocation();
+    }
+
+    function getUserLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; });
+      }
     }
 
     async function getCityCoords(city) {
@@ -390,7 +452,7 @@
       const key = city.toLowerCase().trim();
       if (cityCache[key]) return cityCache[key];
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city + ", Bosnia and Herzegovina")}&limit=1`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`);
         const data = await res.json();
         if (data && data[0]) {
           const coords = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
@@ -406,12 +468,8 @@
       mapVisible = !mapVisible;
       mapEl.style.height = mapVisible ? "280px" : "0px";
       const btn = document.getElementById("map-btn");
-      if (mapVisible) {
-        btn.classList.add("active");
-        setTimeout(() => { if (map) map.invalidateSize(); updateMapMarkers(); }, 350);
-      } else {
-        btn.classList.remove("active");
-      }
+      if (mapVisible) { btn.classList.add("active"); setTimeout(() => { if (map) map.invalidateSize(); updateMapMarkers(); }, 350); }
+      else btn.classList.remove("active");
     }
 
     function setSort(sort, el) {
@@ -478,12 +536,13 @@
     function saveUser(u) { localStorage.setItem("domaceUser", JSON.stringify(u)); }
     function getFavorites() { return JSON.parse(localStorage.getItem("domaceFavorites") || "[]"); }
     function saveFavorites(f) { localStorage.setItem("domaceFavorites", JSON.stringify(f)); }
-    function getHistory() { return JSON.parse(localStorage.getItem("domaceHistory") || "[]"); }
-    function addToHistory(id) {
-      let h = getHistory();
-      h = h.filter(x => x !== id);
-      h.unshift(id);
-      localStorage.setItem("domaceHistory", JSON.stringify(h.slice(0, 20)));
+    function getSearchHistory() { return JSON.parse(localStorage.getItem("domaceSearchHistory") || "[]"); }
+    function addSearchHistory(term) {
+      if (!term || term.length < 2) return;
+      let h = getSearchHistory();
+      h = h.filter(x => x !== term);
+      h.unshift(term);
+      localStorage.setItem("domaceSearchHistory", JSON.stringify(h.slice(0, 10)));
     }
 
     function showConfirm(title, text, onConfirm) {
@@ -553,10 +612,7 @@
       if (!user) return;
       db.collection("chats").where("participants", "array-contains", user.email).onSnapshot(snap => {
         let count = 0;
-        snap.forEach(doc => {
-          const data = doc.data();
-          if (data.lastSender && data.lastSender !== user.email && !data.readBy?.includes(user.email)) count++;
-        });
+        snap.forEach(doc => { const data = doc.data(); if (data.lastSender && data.lastSender !== user.email && !data.readBy?.includes(user.email)) count++; });
         unreadCount = count;
         updateBadge();
       });
@@ -584,12 +640,6 @@
       panel.innerHTML = `<div class="menu-list">${profileViews.map(v => `<div class="menu-item">👁️ ${v.viewer} <span style="float:right; color:#999; font-size:12px;">${new Date(v.time?.toDate?.() || v.time).toLocaleDateString()}</span></div>`).join("")}</div>`;
     }
 
-    function recordProfileView(profileEmail) {
-      const user = getUser();
-      if (!user || user.email === profileEmail) return;
-      db.collection("profileViews").doc(profileEmail).collection("views").add({ viewer: user.name || user.email, time: firebase.firestore.FieldValue.serverTimestamp() });
-    }
-
     function updateBadge() {
       const badge = document.getElementById("msg-badge");
       if (unreadCount > 0) { badge.style.display = "block"; badge.textContent = unreadCount > 9 ? "9+" : unreadCount; }
@@ -600,10 +650,7 @@
       const user = getUser();
       if (!user) return;
       db.collection("chats").where("participants", "array-contains", user.email).get().then(snap => {
-        snap.forEach(doc => {
-          const data = doc.data();
-          if (!data.readBy?.includes(user.email)) doc.ref.update({ readBy: firebase.firestore.FieldValue.arrayUnion(user.email) });
-        });
+        snap.forEach(doc => { const data = doc.data(); if (!data.readBy?.includes(user.email)) doc.ref.update({ readBy: firebase.firestore.FieldValue.arrayUnion(user.email) }); });
       });
     }
 
@@ -620,16 +667,15 @@
       if (!user) {
         settingsIcon.style.display = "none";
         viewsIcon.style.display = "none";
-        container.innerHTML = `<div class="profile-box"><div class="avatar">👤</div><h3>Dobrodošli</h3><p>Prijavite se ili registrujte</p></div><div class="menu-list"><div class="menu-item" onclick="openModal('login')">🔑 Prijava</div><div class="menu-item" onclick="openModal('register')">📝 Registracija</div></div>`;
+        container.innerHTML = `<div class="profile-box"><div class="avatar">👤</div><h3>${t("welcome")}</h3><p>${t("loginOrReg")}</p></div><div class="menu-list"><div class="menu-item" onclick="openModal('login')">🔑 ${t("login")}</div><div class="menu-item" onclick="openModal('register')">📝 ${t("register")}</div></div>`;
       } else {
         settingsIcon.style.display = "inline";
         viewsIcon.style.display = "inline";
         const myAds = allAds.filter(a => a.owner === user.email);
         const totalViews = myAds.reduce((sum, a) => sum + (a.views || 0), 0);
         const totalFavs = myAds.reduce((sum, a) => sum + (getFavorites().filter(f => f === a.id).length), 0);
-        let adminItems = "";
-        if (isAdmin()) adminItems = `<div class="menu-item" onclick="showScreen('reports')">⚠️ Prijave oglasa</div><div class="menu-item" onclick="showScreen('users')">👥 Korisnici</div>`;
-        container.innerHTML = `<div class="profile-box"><div class="avatar">${user.photo ? `<img src="${user.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : "👤"}</div><h3>${user.name || user.email}</h3><p>${user.city || "BiH"}</p><p style="font-size:13px; color:#777; margin-top:6px;">Oglasa: ${myAds.length} • Pregleda: ${totalViews} • Omiljenih: ${totalFavs}</p></div><div class="menu-list"><div class="menu-item" onclick="showScreen('myads')">📋 Moji oglasi</div><div class="menu-item" onclick="showScreen('add')">➕ Dodaj oglas</div>${adminItems}</div>`;
+        let adminItems = isAdmin() ? `<div class="menu-item" onclick="showScreen('reports')">⚠️ Prijave oglasa</div><div class="menu-item" onclick="showScreen('users')">👥 Korisnici</div>` : "";
+        container.innerHTML = `<div class="profile-box"><div class="avatar">${user.photo ? `<img src="${user.photo}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;">` : "👤"}</div><h3>${user.name || user.email}</h3><p>${user.city || "BiH"}</p><p style="font-size:13px; color:#777; margin-top:6px;">Oglasa: ${myAds.length} • Pregleda: ${totalViews} • Omiljenih: ${totalFavs}</p></div><div class="menu-list"><div class="menu-item" onclick="showScreen('myads')">📋 ${t("myAds")}</div><div class="menu-item" onclick="showScreen('add')">➕ ${t("addAd")}</div>${adminItems}</div>`;
       }
     }
 
@@ -640,7 +686,7 @@
       document.getElementById("settings-icon").style.display = "none";
       if (panel.style.display === "block") { closeSettings(); return; }
       panel.style.display = "block";
-      panel.innerHTML = `<div class="menu-list" style="margin-top:0;"><div class="menu-item" onclick="editProfile()">✏️ Uredi profil</div><div class="menu-item" onclick="getLocation()">📍 Dozvoli lokaciju</div><div class="menu-item" onclick="changePhoto()">🖼️ Postavi sliku profila</div><div class="menu-item" onclick="showScreen('notifications')">🔔 Obavijesti</div><div class="menu-item" onclick="toggleTheme()">🌙 Tamni režim</div><div class="menu-item" onclick="shareApp()">📤 Podijeli aplikaciju</div><div class="menu-item" onclick="confirmDeleteProfile()">🗑️ Obriši profil</div><div class="menu-item" onclick="logout()">🚪 Odjava</div></div>`;
+      panel.innerHTML = `<div class="menu-list" style="margin-top:0;"><div class="menu-item" onclick="editProfile()">✏️ Uredi profil</div><div class="menu-item" onclick="getLocation()">📍 Dozvoli lokaciju</div><div class="menu-item" onclick="changePhoto()">🖼️ Postavi sliku profila</div><div class="menu-item" onclick="showScreen('notifications')">🔔 Obavijesti</div><div class="menu-item" onclick="showLanguageScreen()">🌐 ${t("language")} ${LANGUAGES[currentLang].flag}</div><div class="menu-item" onclick="toggleTheme()">🌙 Tamni režim</div><div class="menu-item" onclick="shareApp()">📤 Podijeli aplikaciju</div><div class="menu-item" onclick="confirmDeleteProfile()">🗑️ Obriši profil</div><div class="menu-item" onclick="logout()">🚪 ${t("logout")}</div></div>`;
     }
     function closeSettings() {
       document.getElementById("settings-panel").style.display = "none";
@@ -660,20 +706,11 @@
     }
 
     function confirmDeleteProfile() {
-      showConfirm("Obriši profil", "Jeste li sigurni da želite obrisati svoj profil? Ova radnja se ne može poništiti.", () => {
+      showConfirm("Obriši profil", "Jeste li sigurni da želite obrisati svoj profil?", () => {
         const user = getUser();
         if (user && currentUser) {
           db.collection("users").doc(currentUser.uid).delete().then(() => {
-            currentUser.delete().then(() => {
-              localStorage.removeItem("domaceUser");
-              renderProfile();
-              showConfirm("Profil obrisan", "Vaš profil je uspješno obrisan.", () => {});
-            }).catch(() => {
-              auth.signOut();
-              localStorage.removeItem("domaceUser");
-              renderProfile();
-              showConfirm("Profil obrisan", "Vaš profil je obrisan.", () => {});
-            });
+            currentUser.delete().then(() => { localStorage.removeItem("domaceUser"); renderProfile(); showConfirm("Profil obrisan", "Vaš profil je uspješno obrisan.", () => {}); }).catch(() => { auth.signOut(); localStorage.removeItem("domaceUser"); renderProfile(); showConfirm("Profil obrisan", "Vaš profil je obrisan.", () => {}); });
           });
         }
       });
@@ -688,19 +725,10 @@
       document.getElementById("notif-system").checked = s.system !== false;
     }
     function saveNotifSettings() {
-      localStorage.setItem("domaceNotifs", JSON.stringify({
-        messages: document.getElementById("notif-messages").checked,
-        nearby: document.getElementById("notif-nearby").checked,
-        categories: document.getElementById("notif-categories").checked,
-        replies: document.getElementById("notif-replies").checked,
-        system: document.getElementById("notif-system").checked
-      }));
+      localStorage.setItem("domaceNotifs", JSON.stringify({ messages: document.getElementById("notif-messages").checked, nearby: document.getElementById("notif-nearby").checked, categories: document.getElementById("notif-categories").checked, replies: document.getElementById("notif-replies").checked, system: document.getElementById("notif-system").checked }));
     }
 
-    function containsAlcohol(text) {
-      const lower = text.toLowerCase();
-      return ALCOHOL_WORDS.some(w => lower.includes(w));
-    }
+    function containsAlcohol(text) { const lower = text.toLowerCase(); return ALCOHOL_WORDS.some(w => lower.includes(w)); }
 
     function saveAd(e) {
       e.preventDefault();
@@ -714,24 +742,12 @@
       const user = getUser();
       if (!user) return showConfirm("Greška", "Morate biti prijavljeni", () => {});
       if (containsAlcohol(product + " " + desc)) { showConfirm("Nije dozvoljeno", "Oglasi koji sadrže alkohol nisu dozvoljeni.", () => {}); return; }
-      if (!editingAdId) {
-        const myCount = allAds.filter(a => a.owner === user.email).length;
-        if (myCount >= MAX_FREE_ADS && !isAdmin()) { showConfirm("Limit", "Dostigli ste limit od " + MAX_FREE_ADS + " oglasa.", () => {}); return; }
-      }
+      if (!editingAdId) { const myCount = allAds.filter(a => a.owner === user.email).length; if (myCount >= MAX_FREE_ADS && !isAdmin()) { showConfirm("Limit", "Dostigli ste limit od " + MAX_FREE_ADS + " oglasa.", () => {}); return; } }
       const ad = { product, price, unit, qty, city, desc, category, views: editingAdId ? (allAds.find(a => a.id === editingAdId)?.views || 0) : 0, status: "Dostupno", owner: user.email, ownerName: user.name || user.email, phone: user.phone || "", created: editingAdId ? (allAds.find(a => a.id === editingAdId)?.created || firebase.firestore.FieldValue.serverTimestamp()) : firebase.firestore.FieldValue.serverTimestamp() };
       function upload(photos) {
         if (photos.length) ad.photos = photos;
         const promise = editingAdId ? db.collection("ads").doc(editingAdId).set(ad, { merge: true }) : db.collection("ads").add(ad);
-        promise.then(() => {
-          showSuccessCheck();
-          document.getElementById("adForm").reset();
-          document.getElementById("photo-preview").innerHTML = "";
-          selectedPhotos = [];
-          editingAdId = null;
-          document.getElementById("add-title").textContent = "Dodaj oglas";
-          document.getElementById("adSubmitBtn").textContent = "Spremi";
-          setTimeout(() => showScreen("myads"), 2100);
-        });
+        promise.then(() => { showSuccessCheck(); document.getElementById("adForm").reset(); document.getElementById("photo-preview").innerHTML = ""; selectedPhotos = []; editingAdId = null; document.getElementById("add-title").textContent = t("addAd"); document.getElementById("adSubmitBtn").textContent = t("save"); setTimeout(() => showScreen("myads"), 2100); });
       }
       if (selectedPhotos.length) upload(selectedPhotos); else upload([]);
     }
@@ -752,11 +768,7 @@
       showScreen("add");
     }
 
-    function confirmDeleteOwnAd(id) {
-      showConfirm("Obriši oglas", "Jeste li sigurni da želite obrisati svoj oglas?", () => {
-        db.collection("ads").doc(id).delete().then(() => { showConfirm("Obrisano", "Oglas je uspješno obrisan.", () => {}); showScreen("myads"); });
-      });
-    }
+    function confirmDeleteOwnAd(id) { showConfirm("Obriši oglas", "Jeste li sigurni?", () => { db.collection("ads").doc(id).delete().then(() => { showConfirm("Obrisano", "Oglas je obrisan.", () => {}); showScreen("myads"); }); }); }
 
     function renderMyAds() {
       const list = document.getElementById("my-ads-list");
@@ -769,10 +781,12 @@
     function renderHomeProducts() {
       const container = document.getElementById("home-products");
       const search = (document.getElementById("search-input")?.value || "").toLowerCase().trim();
+      const priceFilter = document.getElementById("price-filter")?.value || "";
       let filtered = allAds.filter(a => a.status !== "Prodano");
       if (currentCategory !== "Sve") filtered = filtered.filter(a => a.category === currentCategory);
       if (currentSort === "available") filtered = filtered.filter(a => a.status === "Dostupno");
-      if (search) filtered = filtered.filter(a => a.product.toLowerCase().startsWith(search) || a.product.toLowerCase().includes(search) || (a.city || "").toLowerCase().includes(search));
+      if (search) { filtered = filtered.filter(a => a.product.toLowerCase().startsWith(search) || a.product.toLowerCase().includes(search) || (a.city || "").toLowerCase().includes(search)); addSearchHistory(search); }
+      if (priceFilter) { const [min, max] = priceFilter.split("-").map(Number); filtered = filtered.filter(a => { const p = parseFloat(a.price) || 0; if (priceFilter === "100+") return p >= 100; return p >= min && p <= max; }); }
       if (currentSort === "newest") filtered.sort((a, b) => { const ta = a.created?.toDate?.() || new Date(a.created || 0); const tb = b.created?.toDate?.() || new Date(b.created || 0); return tb - ta; });
       if (!filtered.length) { container.innerHTML = "<p style='text-align:center;padding:20px;'>Nema oglasa</p>"; return; }
       container.innerHTML = filtered.map(ad => `<div class="product-card" onclick="openAd('${ad.id}')">${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}<div class="info"><div class="name">${ad.product} ${isNew(ad) ? '<span style="background:#e53935;color:white;font-size:10px;padding:2px 6px;border-radius:10px;margin-left:6px;">NOVI</span>' : ''}</div><div class="price">${ad.price} / ${ad.unit || 'kg'}</div><div class="distance">${ad.city || ""} • ${ad.qty || ""} • 👁️ ${ad.views || 0}</div></div></div>`).join("");
@@ -786,17 +800,11 @@
       container.innerHTML = favAds.map(ad => `<div class="product-card" onclick="openAd('${ad.id}')">${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}<div class="info"><div class="name">${ad.product}</div><div class="price">${ad.price} / ${ad.unit || 'kg'}</div><div class="distance">${ad.city || ""}</div></div></div>`).join("");
     }
 
-    function toggleFavorite(id) {
-      let favs = getFavorites();
-      if (favs.includes(id)) favs = favs.filter(f => f !== id); else favs.push(id);
-      saveFavorites(favs);
-      openAd(id);
-    }
+    function toggleFavorite(id) { let favs = getFavorites(); if (favs.includes(id)) favs = favs.filter(f => f !== id); else favs.push(id); saveFavorites(favs); openAd(id); }
 
     function openAd(id) {
       const ad = allAds.find(a => a.id === id);
       if (!ad) return;
-      addToHistory(id);
       db.collection("ads").doc(id).update({ views: firebase.firestore.FieldValue.increment(1) });
       const favs = getFavorites();
       const isFav = favs.includes(id);
@@ -807,7 +815,8 @@
       let adminBtn = isAdmin() ? `<button onclick="confirmDeleteAd('${id}')" style="background:#e53935; color:white; border:none; padding:10px 16px; border-radius:8px; margin-top:10px; width:100%;">🗑️ Obriši oglas (Admin)</button>` : "";
       let statusBtn = isOwner ? `<button onclick="toggleAdStatus('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">${ad.status === "Prodano" ? "✅ Označi kao dostupno" : "📦 Označi kao prodano"}</button>` : "";
       let reportBtn = !isOwner ? `<button onclick="openReportModal('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">⚠️ Prijavi oglas</button>` : "";
-      document.getElementById("ad-detail").innerHTML = `${currentGallery.length ? `<div style="position:relative; margin-bottom:12px;"><img id="gallery-img" src="${currentGallery[0]}" style="width:100%; height:220px; object-fit:cover; border-radius:12px;">${currentGallery.length > 1 ? `<button onclick="prevImg()" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px;">‹</button><button onclick="nextImg()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px;">›</button>` : ''}</div>` : ''}<h2 style="margin-bottom:6px;">${ad.product} ${isNew(ad) ? '<span style="background:#e53935;color:white;font-size:12px;padding:2px 8px;border-radius:10px;">NOVI</span>' : ''}</h2><div class="price" style="font-size:20px; margin-bottom:8px;">${ad.price} / ${ad.unit || 'kg'}</div><p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"} • ${ad.category || ""}</p><p style="margin-bottom:4px;">Količina: ${ad.qty || "Nije navedeno"}</p><p style="margin-bottom:12px;">${ad.desc || "Nema opisa"}</p><p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: <span style="color:#1a5c2e; cursor:pointer;" onclick="openSeller('${ad.owner}')">${ad.ownerName || ad.owner}</span> • ${ad.status || "Dostupno"}<br>Objavljeno: ${formatDate(ad.created)}</p><div style="display:flex; gap:8px; margin-bottom:10px;"><button class="btn-green" onclick="startChat('${ad.owner}')" style="flex:1;">💬 Pošalji poruku</button><button onclick="toggleFavorite('${id}')" style="padding:12px 16px; background:${isFav ? '#e53935' : '#eee'}; border:none; border-radius:8px; color:${isFav ? 'white' : 'black'};">♥</button></div><button onclick="shareAd('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">📤 Podijeli oglas</button>${statusBtn}${reportBtn}${adminBtn}`;
+      let rateBtn = !isOwner && user ? `<button onclick="openRateModal('${ad.owner}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">⭐ Ocijeni prodavača</button>` : "";
+      document.getElementById("ad-detail").innerHTML = `${currentGallery.length ? `<div style="position:relative; margin-bottom:12px;"><img id="gallery-img" src="${currentGallery[0]}" style="width:100%; height:220px; object-fit:cover; border-radius:12px;">${currentGallery.length > 1 ? `<button onclick="prevImg()" style="position:absolute; left:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px;">‹</button><button onclick="nextImg()" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:32px; height:32px;">›</button>` : ''}</div>` : ''}<h2 style="margin-bottom:6px;">${ad.product} ${isNew(ad) ? '<span style="background:#e53935;color:white;font-size:12px;padding:2px 8px;border-radius:10px;">NOVI</span>' : ''}</h2><div class="price" style="font-size:20px; margin-bottom:8px;">${ad.price} / ${ad.unit || 'kg'}</div><p style="color:#555; margin-bottom:8px;">📍 ${ad.city || "Nije navedeno"} • ${ad.category || ""}</p><p style="margin-bottom:4px;">Količina: ${ad.qty || "Nije navedeno"}</p><p style="margin-bottom:12px;">${ad.desc || "Nema opisa"}</p><p style="color:#777; margin-bottom:16px;">👁️ ${ad.views || 0} pregleda • Prodavač: <span style="color:#1a5c2e; cursor:pointer;" onclick="openSeller('${ad.owner}')">${ad.ownerName || ad.owner}</span> • ${ad.status || "Dostupno"}<br>Objavljeno: ${formatDate(ad.created)}</p><div style="display:flex; gap:8px; margin-bottom:10px;"><button class="btn-green" onclick="startChat('${ad.owner}')" style="flex:1;">💬 Pošalji poruku</button><button onclick="toggleFavorite('${id}')" style="padding:12px 16px; background:${isFav ? '#e53935' : '#eee'}; border:none; border-radius:8px; color:${isFav ? 'white' : 'black'};">♥</button></div><button onclick="shareAd('${id}')" style="background:#fff; border:1px solid #ddd; padding:10px; border-radius:8px; width:100%; margin-bottom:10px;">📤 Podijeli oglas</button>${statusBtn}${reportBtn}${rateBtn}${adminBtn}`;
       showScreen("detail");
     }
 
@@ -816,65 +825,53 @@
 
     function openSeller(email) {
       document.getElementById("seller-title").textContent = email;
+      db.collection("ratings").where("seller", "==", email).get().then(snap => {
+        let total = 0, count = 0;
+        snap.forEach(doc => { total += doc.data().rating; count++; });
+        const avg = count ? (total / count).toFixed(1) : "Nema";
+        document.getElementById("seller-rating").innerHTML = `<div class="stars">${"★".repeat(Math.round(avg) || 0)}${"☆".repeat(5 - Math.round(avg || 0))}</div><p>${avg} (${count} ocjena)</p>`;
+      });
       const ads = allAds.filter(a => a.owner === email && a.status !== "Prodano");
       document.getElementById("seller-ads").innerHTML = ads.length ? ads.map(ad => `<div class="product-card" onclick="openAd('${ad.id}')">${ad.photos && ad.photos[0] ? `<img src="${ad.photos[0]}">` : `<div style="width:100px;height:100px;background:#eee;"></div>`}<div class="info"><div class="name">${ad.product}</div><div class="price">${ad.price} / ${ad.unit || 'kg'}</div><div class="distance">${ad.city || ""}</div></div></div>`).join("") : "<p style='text-align:center;padding:20px;'>Nema oglasa</p>";
       showScreen("seller");
     }
 
-    function toggleAdStatus(id) {
-      const ad = allAds.find(a => a.id === id);
-      if (!ad) return;
-      db.collection("ads").doc(id).update({ status: ad.status === "Prodano" ? "Dostupno" : "Prodano" }).then(() => openAd(id));
-    }
-
-    function shareAd(id) {
-      const ad = allAds.find(a => a.id === id);
-      if (!ad) return;
-      const text = `${ad.product} - ${ad.price} / ${ad.unit || 'kg'}\n${ad.city || ""}\nhttps://hadzicedin48-design.github.io/DomaceBIH/`;
-      if (navigator.share) navigator.share({ title: ad.product, text });
-      else { navigator.clipboard.writeText(text); showConfirm("Kopirano", "Link oglasa je kopiran.", () => {}); }
-    }
-
-    function openReportModal(id) {
-      reportingAdId = id;
-      document.getElementById("report-reasons").innerHTML = REPORT_REASONS.map(r => `<div class="menu-item" onclick="submitReport('${r}')">${r}</div>`).join("");
-      document.getElementById("reportModal").style.display = "flex";
-    }
-    function closeReportModal() { document.getElementById("reportModal").style.display = "none"; reportingAdId = null; }
-    function submitReport(reason) {
+    function openRateModal(seller) { ratingTarget = seller; currentRating = 0; document.getElementById("rateModal").style.display = "flex"; }
+    function setRating(r) { currentRating = r; document.querySelectorAll("#rating-stars span").forEach((s, i) => s.style.color = i < r ? "#ffc107" : "#ccc"); }
+    function submitRating() {
       const user = getUser();
-      if (!user || !reportingAdId) return;
-      db.collection("reports").add({ adId: reportingAdId, reason, reporter: user.email, time: firebase.firestore.FieldValue.serverTimestamp(), status: "new" }).then(() => { showConfirm("Poslano", "Prijava je uspješno poslana. Hvala!", () => {}); closeReportModal(); });
+      if (!user || !ratingTarget || !currentRating) return;
+      db.collection("ratings").add({ seller: ratingTarget, rater: user.email, rating: currentRating, time: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { document.getElementById("rateModal").style.display = "none"; showConfirm("Hvala", "Ocjena je poslana!", () => {}); });
     }
+
+    function toggleAdStatus(id) { const ad = allAds.find(a => a.id === id); if (!ad) return; db.collection("ads").doc(id).update({ status: ad.status === "Prodano" ? "Dostupno" : "Prodano" }).then(() => openAd(id)); }
+    function shareAd(id) { const ad = allAds.find(a => a.id === id); if (!ad) return; const text = `${ad.product} - ${ad.price} / ${ad.unit || 'kg'}\n${ad.city || ""}\nhttps://hadzicedin48-design.github.io/DomaceBIH/`; if (navigator.share) navigator.share({ title: ad.product, text }); else { navigator.clipboard.writeText(text); showConfirm("Kopirano", "Link oglasa je kopiran.", () => {}); } }
+
+    function openReportModal(id) { reportingAdId = id; document.getElementById("report-reasons").innerHTML = REPORT_REASONS.map(r => `<div class="menu-item" onclick="submitReport('${r}')">${r}</div>`).join(""); document.getElementById("reportModal").style.display = "flex"; }
+    function closeReportModal() { document.getElementById("reportModal").style.display = "none"; reportingAdId = null; }
+    function submitReport(reason) { const user = getUser(); if (!user || !reportingAdId) return; db.collection("reports").add({ adId: reportingAdId, reason, reporter: user.email, time: firebase.firestore.FieldValue.serverTimestamp(), status: "new" }).then(() => { showConfirm("Poslano", "Prijava je poslana. Hvala!", () => {}); closeReportModal(); }); }
 
     function loadReports() {
       const list = document.getElementById("reports-list");
       db.collection("reports").orderBy("time", "desc").onSnapshot(snap => {
         if (snap.empty) { list.innerHTML = "<p style='text-align:center;padding:20px;'>Nema prijava</p>"; return; }
-        list.innerHTML = snap.docs.map(doc => { const r = doc.data(); const ad = allAds.find(a => a.id === r.adId); return `<div class="menu-item" style="border-bottom:1px solid #eee; padding:12px;"><strong>${ad ? ad.product : "Oglas"}</strong><br><span style="color:#e53935;">Razlog: ${r.reason}</span><br><span style="color:#777; font-size:13px;">Prijavio: ${r.reporter}</span><div style="margin-top:8px;"><button onclick="openAd('${r.adId}')" style="padding:6px 12px; background:#1a5c2e; color:white; border:none; border-radius:6px; margin-right:6px;">Pogledaj</button><button onclick="confirmDeleteAd('${r.adId}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Obriši</button></div></div>`; }).join("");
+        list.innerHTML = snap.docs.map(doc => { const r = doc.data(); const ad = allAds.find(a => a.id === r.adId); return `<div class="menu-item" style="border-bottom:1px solid #eee; padding:12px;"><strong>${ad ? ad.product : (r.reportedUser || "Prijava")}</strong><br><span style="color:#e53935;">Razlog: ${r.reason}</span><br><span style="color:#777; font-size:13px;">Prijavio: ${r.reporter}</span>${r.adId ? `<div style="margin-top:8px;"><button onclick="openAd('${r.adId}')" style="padding:6px 12px; background:#1a5c2e; color:white; border:none; border-radius:6px; margin-right:6px;">Pogledaj</button><button onclick="confirmDeleteAd('${r.adId}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Obriši</button></div>` : ''}</div>`; }).join("");
       });
     }
 
     function loadUsers() {
       const list = document.getElementById("users-list");
-      db.collection("users").onSnapshot(snap => {
-        list.innerHTML = `<div style="padding:12px; font-weight:bold; background:#f5f5f5; margin-bottom:8px; border-radius:8px;">Ukupno korisnika: ${snap.size}</div>` + snap.docs.map(doc => { const u = doc.data(); return `<div class="menu-item" style="border-bottom:1px solid #eee; padding:12px; display:flex; justify-content:space-between; align-items:center;"><div>${u.name || u.email}</div><button onclick="banUser('${doc.id}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Ban</button></div>`; }).join("");
-      });
+      db.collection("users").onSnapshot(snap => { list.innerHTML = `<div style="padding:12px; font-weight:bold; background:#f5f5f5; margin-bottom:8px; border-radius:8px;">Ukupno korisnika: ${snap.size}</div>` + snap.docs.map(doc => { const u = doc.data(); return `<div class="menu-item" style="border-bottom:1px solid #eee; padding:12px; display:flex; justify-content:space-between; align-items:center;"><div>${u.name || u.email}</div><button onclick="banUser('${doc.id}')" style="padding:6px 12px; background:#e53935; color:white; border:none; border-radius:6px;">Ban</button></div>`; }).join(""); });
     }
 
-    function banUser(uid) {
-      showConfirm("Ban korisnika", "Banovati ovog korisnika?", () => { db.collection("users").doc(uid).update({ banned: true }).then(() => showConfirm("Banovano", "Korisnik je banovan.", () => {})); });
-    }
-
-    function confirmDeleteAd(id) {
-      showConfirm("Obriši oglas", "Jeste li sigurni da želite obrisati ovaj oglas?", () => { db.collection("ads").doc(id).delete().then(() => { showConfirm("Obrisano", "Oglas je uspješno obrisan.", () => {}); showScreen("home", document.querySelector(".nav-item")); }); });
-    }
+    function banUser(uid) { showConfirm("Ban korisnika", "Banovati ovog korisnika?", () => { db.collection("users").doc(uid).update({ banned: true }).then(() => showConfirm("Banovano", "Korisnik je banovan.", () => {})); }); }
+    function confirmDeleteAd(id) { showConfirm("Obriši oglas", "Jeste li sigurni?", () => { db.collection("ads").doc(id).delete().then(() => { showConfirm("Obrisano", "Oglas je obrisan.", () => {}); showScreen("home", document.querySelector(".nav-item")); }); }); }
 
     function showMessagesList() {
       if (unsubscribeChat) unsubscribeChat();
       document.getElementById("messages-list").style.display = "block";
       document.getElementById("chat-area").style.display = "none";
-      document.getElementById("chat-title").textContent = "Poruke";
+      document.getElementById("chat-title").textContent = t("messages");
       document.getElementById("chat-menu-btn").style.display = "none";
       document.getElementById("chat-menu").style.display = "none";
       const user = getUser();
@@ -900,48 +897,18 @@
       if (unsubscribeChat) unsubscribeChat();
       unsubscribeChat = db.collection("chats").doc(chatId).collection("messages").orderBy("time").onSnapshot(snap => {
         const box = document.getElementById("chat-messages");
-        box.innerHTML = snap.docs.map(doc => { const m = doc.data(); const timeStr = m.time ? formatDate(m.time) : ""; return `<div style="margin:8px 0; text-align:${m.sender === user.email ? "right" : "left"};"><div style="display:inline-block; background:${m.sender === user.email ? "#1a5c2e" : "#eee"}; color:${m.sender === user.email ? "white" : "black"}; padding:8px 12px; border-radius:12px; max-width:75%;">${m.image ? `<img src="${m.image}" style="max-width:180px; border-radius:8px; display:block; margin-bottom:4px;">` : ""}${m.text || ""}<div style="font-size:10px; opacity:0.7; margin-top:4px;">${timeStr}</div></div></div>`; }).join("") || "<p style='text-align:center; color:#999;'>Nema poruka</p>";
+        box.innerHTML = snap.docs.map(doc => { const m = doc.data(); const timeStr = m.time ? formatDate(m.time) : ""; const isMe = m.sender === user.email; const readStatus = isMe && m.read ? "✓✓" : isMe ? "✓" : ""; return `<div style="margin:8px 0; text-align:${isMe ? "right" : "left"};"><div style="display:inline-block; background:${isMe ? "#1a5c2e" : "#eee"}; color:${isMe ? "white" : "black"}; padding:8px 12px; border-radius:12px; max-width:75%;">${m.image ? `<img src="${m.image}" style="max-width:180px; border-radius:8px; display:block; margin-bottom:4px;">` : ""}${m.text || ""}<div style="font-size:10px; opacity:0.7; margin-top:4px;">${timeStr} ${readStatus}</div></div></div>`; }).join("") || "<p style='text-align:center; color:#999;'>Nema poruka</p>";
         box.scrollTop = box.scrollHeight;
       });
     }
 
     function toggleChatMenu() { const menu = document.getElementById("chat-menu"); menu.style.display = menu.style.display === "block" ? "none" : "block"; }
-
-    function confirmDeleteChat() {
-      document.getElementById("chat-menu").style.display = "none";
-      showConfirm("Obriši chat", "Jeste li sigurni da želite obrisati ovaj chat?", () => {
-        const user = getUser();
-        const chatId = [user.email, currentChatWith].sort().join("_");
-        db.collection("chats").doc(chatId).delete().then(() => showMessagesList());
-      });
-    }
-
-    function confirmBlockUser() {
-      document.getElementById("chat-menu").style.display = "none";
-      showConfirm("Blokiraj", "Blokirati korisnika " + currentChatWith + "?", () => {
-        const user = getUser();
-        db.collection("blocks").add({ blocker: user.email, blocked: currentChatWith, time: firebase.firestore.FieldValue.serverTimestamp() }).then(() => {
-          showConfirm("Blokirano", "Korisnik je blokiran.", () => {});
-        });
-      });
-    }
-
-    function reportUser() {
-      document.getElementById("chat-menu").style.display = "none";
-      showConfirm("Prijavi korisnika", "Prijaviti korisnika " + currentChatWith + "?", () => {
-        const user = getUser();
-        db.collection("reports").add({ type: "user", reportedUser: currentChatWith, reporter: user.email, reason: "Prijava korisnika", time: firebase.firestore.FieldValue.serverTimestamp(), status: "new" }).then(() => {
-          showConfirm("Poslano", "Prijava je poslana. Hvala!", () => {});
-        });
-      });
-    }
+    function confirmDeleteChat() { document.getElementById("chat-menu").style.display = "none"; showConfirm("Obriši chat", "Jeste li sigurni?", () => { const user = getUser(); const chatId = [user.email, currentChatWith].sort().join("_"); db.collection("chats").doc(chatId).delete().then(() => showMessagesList()); }); }
+    function confirmBlockUser() { document.getElementById("chat-menu").style.display = "none"; showConfirm("Blokiraj", "Blokirati korisnika " + currentChatWith + "?", () => { const user = getUser(); db.collection("blocks").add({ blocker: user.email, blocked: currentChatWith, time: firebase.firestore.FieldValue.serverTimestamp() }).then(() => showConfirm("Blokirano", "Korisnik je blokiran.", () => {})); }); }
+    function reportUser() { document.getElementById("chat-menu").style.display = "none"; showConfirm("Prijavi korisnika", "Prijaviti korisnika " + currentChatWith + "?", () => { const user = getUser(); db.collection("reports").add({ type: "user", reportedUser: currentChatWith, reporter: user.email, reason: "Prijava korisnika", time: firebase.firestore.FieldValue.serverTimestamp(), status: "new" }).then(() => showConfirm("Poslano", "Prijava je poslana.", () => {})); }); }
 
     function sendQuick(text) { document.getElementById("chat-input").value = text; sendChatMessage(); }
-
-    function shareMyLocation() {
-      if (!navigator.geolocation) return showConfirm("Greška", "Lokacija nije podržana", () => {});
-      navigator.geolocation.getCurrentPosition(pos => { document.getElementById("chat-input").value = `Moja lokacija: https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`; sendChatMessage(); });
-    }
+    function shareMyLocation() { if (!navigator.geolocation) return showConfirm("Greška", "Lokacija nije podržana", () => {}); navigator.geolocation.getCurrentPosition(pos => { document.getElementById("chat-input").value = `Moja lokacija: https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`; sendChatMessage(); }); }
 
     function sendChatMessage() {
       const input = document.getElementById("chat-input");
@@ -961,23 +928,11 @@
       const user = getUser();
       if (!user) return;
       const reader = new FileReader();
-      reader.onload = () => {
-        const chatId = [user.email, currentChatWith].sort().join("_");
-        const chatRef = db.collection("chats").doc(chatId);
-        chatRef.set({ participants: [user.email, currentChatWith], lastMessage: "📷 Slika", lastSender: user.email, readBy: [user.email], updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true });
-        chatRef.collection("messages").add({ image: reader.result, sender: user.email, time: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { input.value = ""; });
-      };
+      reader.onload = () => { const chatId = [user.email, currentChatWith].sort().join("_"); const chatRef = db.collection("chats").doc(chatId); chatRef.set({ participants: [user.email, currentChatWith], lastMessage: "📷 Slika", lastSender: user.email, readBy: [user.email], updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); chatRef.collection("messages").add({ image: reader.result, sender: user.email, time: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { input.value = ""; }); };
       reader.readAsDataURL(file);
     }
 
-    function openModal(type) {
-      isRegisterMode = (type === "register");
-      document.getElementById("modalTitle").textContent = isRegisterMode ? "Registracija" : "Prijava";
-      document.getElementById("inputName").style.display = isRegisterMode ? "block" : "none";
-      document.getElementById("inputCity").style.display = isRegisterMode ? "block" : "none";
-      document.getElementById("inputPhone").style.display = isRegisterMode ? "block" : "none";
-      document.getElementById("authModal").style.display = "flex";
-    }
+    function openModal(type) { isRegisterMode = (type === "register"); document.getElementById("modalTitle").textContent = isRegisterMode ? t("register") : t("login"); document.getElementById("inputName").style.display = isRegisterMode ? "block" : "none"; document.getElementById("inputCity").style.display = isRegisterMode ? "block" : "none"; document.getElementById("inputPhone").style.display = isRegisterMode ? "block" : "none"; document.getElementById("authModal").style.display = "flex"; }
     function closeModal() { document.getElementById("authModal").style.display = "none"; document.getElementById("authForm").reset(); isRegisterMode = false; }
     function handleAuth(e) {
       e.preventDefault();
@@ -987,42 +942,14 @@
       const city = document.getElementById("inputCity").value.trim();
       const phone = document.getElementById("inputPhone").value.trim();
       if (!email || !password) return showConfirm("Greška", "Unesite email i lozinku", () => {});
-      if (isRegisterMode) {
-        auth.createUserWithEmailAndPassword(email, password).then(cred => db.collection("users").doc(cred.user.uid).set({ email, name: name || email, city, phone })).then(() => { closeModal(); showConfirm("Uspjeh", "Registracija je uspješna!", () => {}); }).catch(err => showConfirm("Greška", err.message, () => {}));
-      } else {
-        auth.signInWithEmailAndPassword(email, password).then(() => closeModal()).catch(err => showConfirm("Greška", err.message, () => {}));
-      }
+      if (isRegisterMode) { auth.createUserWithEmailAndPassword(email, password).then(cred => db.collection("users").doc(cred.user.uid).set({ email, name: name || email, city, phone })).then(() => { closeModal(); showConfirm("Uspjeh", "Registracija je uspješna!", () => {}); }).catch(err => showConfirm("Greška", err.message, () => {})); }
+      else { auth.signInWithEmailAndPassword(email, password).then(() => closeModal()).catch(err => showConfirm("Greška", err.message, () => {})); }
     }
 
-    function editProfile() {
-      const user = getUser();
-      if (!user) return;
-      document.getElementById("inputEmail").value = user.email || "";
-      document.getElementById("inputName").value = user.name || "";
-      document.getElementById("inputCity").value = user.city || "";
-      document.getElementById("inputPhone").value = user.phone || "";
-      document.getElementById("inputName").style.display = "block";
-      document.getElementById("inputCity").style.display = "block";
-      document.getElementById("inputPhone").style.display = "block";
-      document.getElementById("modalTitle").textContent = "Uredi profil";
-      document.getElementById("authModal").style.display = "flex";
-      closeSettings();
-    }
-    function getLocation() {
-      if (!navigator.geolocation) return showConfirm("Greška", "Lokacija nije podržana", () => {});
-      navigator.geolocation.getCurrentPosition(pos => { const user = getUser() || {}; user.lat = pos.coords.latitude; user.lng = pos.coords.longitude; saveUser(user); showConfirm("Sačuvano", "Lokacija je sačuvana!", () => {}); showMyLocation(); }, () => showConfirm("Greška", "Niste dozvolili lokaciju", () => {}));
-    }
-    function changePhoto() {
-      const input = document.createElement("input");
-      input.type = "file"; input.accept = "image/*";
-      input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { const user = getUser() || {}; user.photo = reader.result; saveUser(user); if (currentUser) db.collection("users").doc(currentUser.uid).set({ photo: user.photo }, { merge: true }); renderProfile(); }; reader.readAsDataURL(file); };
-      input.click();
-    }
-    function shareApp() {
-      const url = "https://hadzicedin48-design.github.io/DomaceBIH/";
-      if (navigator.share) navigator.share({ title: "Domaće", url });
-      else { navigator.clipboard.writeText(url); showConfirm("Kopirano", "Link aplikacije je kopiran!", () => {}); }
-    }
+    function editProfile() { const user = getUser(); if (!user) return; document.getElementById("inputEmail").value = user.email || ""; document.getElementById("inputName").value = user.name || ""; document.getElementById("inputCity").value = user.city || ""; document.getElementById("inputPhone").value = user.phone || ""; document.getElementById("inputName").style.display = "block"; document.getElementById("inputCity").style.display = "block"; document.getElementById("inputPhone").style.display = "block"; document.getElementById("modalTitle").textContent = "Uredi profil"; document.getElementById("authModal").style.display = "flex"; closeSettings(); }
+    function getLocation() { if (!navigator.geolocation) return showConfirm("Greška", "Lokacija nije podržana", () => {}); navigator.geolocation.getCurrentPosition(pos => { const user = getUser() || {}; user.lat = pos.coords.latitude; user.lng = pos.coords.longitude; saveUser(user); userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; showConfirm("Sačuvano", "Lokacija je sačuvana!", () => {}); showMyLocation(); }, () => showConfirm("Greška", "Niste dozvolili lokaciju", () => {})); }
+    function changePhoto() { const input = document.createElement("input"); input.type = "file"; input.accept = "image/*"; input.onchange = e => { const file = e.target.files[0]; if (!file) return; const reader = new FileReader(); reader.onload = () => { const user = getUser() || {}; user.photo = reader.result; saveUser(user); if (currentUser) db.collection("users").doc(currentUser.uid).set({ photo: user.photo }, { merge: true }); renderProfile(); }; reader.readAsDataURL(file); }; input.click(); }
+    function shareApp() { const url = "https://hadzicedin48-design.github.io/DomaceBIH/"; if (navigator.share) navigator.share({ title: "Domaće", url }); else { navigator.clipboard.writeText(url); showConfirm("Kopirano", "Link aplikacije je kopiran!", () => {}); } }
     function logout() { auth.signOut(); localStorage.removeItem("domaceUser"); renderProfile(); }
   </script>
 </body>
