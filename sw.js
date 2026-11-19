@@ -1,30 +1,20 @@
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
-
-firebase.initializeApp({
-  apiKey: "AIzaSyDgXYpb32iMlAJBeZyLgP6xC8mWfpytsiM",
-  authDomain: "domacebih-99bc3.firebaseapp.com",
-  projectId: "domacebih-99bc3",
-  storageBucket: "domacebih-99bc3.firebasestorage.app",
-  messagingSenderId: "990089586929",
-  appId: "1:990089586929:web:1c643f76a92405a5c8e150"
-});
-
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage(payload => {
-  const title = payload.notification?.title || "Domaće BIH";
-  const options = {
-    body: payload.notification?.body || "Nova obavijest",
-    icon: "/logo.png",
-    badge: "/logo.png",
-    tag: "domace-notification",
-    renotify: true
-  };
-  self.registration.showNotification(title, options);
-});
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(clients.openWindow('/'));
-});
+function loginWithGoogle() { 
+  const provider = new firebase.auth.GoogleAuthProvider(); 
+  auth.signInWithPopup(provider).then(result => { 
+    const user = result.user; 
+    const userData = { 
+      uid: user.uid, 
+      email: user.email, 
+      name: user.displayName || user.email, 
+      photo: user.photoURL || "", 
+      city: "", 
+      isSeller: false, 
+      verified: false 
+    };
+    localStorage.setItem("domaceUser", JSON.stringify(userData));
+    db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "" }, { merge: true }); 
+    closeModal(); 
+    renderProfile();
+    showConfirm("✅", t("success"), () => {}); 
+  }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {})); 
+}
