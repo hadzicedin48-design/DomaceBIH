@@ -156,6 +156,8 @@
     const VAPID_KEY = "BL5a_cGRMsUMN01y13SlMR1zOcoJ9WGj1bGT4HplfVvAlUC0tBvxl_x_xFhCD2j5PSVMkafqEn9KSaATDyRyJ_M";
     let currentCategory = "Sve", currentSort = "newest", reportingAdId = null, isRegisterMode = false, markers = [], myMarker = null, currentGallery = [], galleryIndex = 0, editingAdId = null, screenHistory = ["home"], mapVisible = false, currentUser = null, selectedPhotos = [], cityCache = {}, isUserAdmin = false, currentLang = localStorage.getItem("domaceLang") || "bs", currentRating = 0, ratingTarget = null, userLocation = null, sellerRatings = {}, lastUnreadCount = 0, guestId = localStorage.getItem("guestId") || ("guest_" + Date.now()), userPhotos = {}, userNames = {}, allUsers = [], messaging = null;
     if (!localStorage.getItem("guestId")) localStorage.setItem("guestId", guestId);
+    const deviceId = localStorage.getItem("deviceId") || ("dev_" + Math.random().toString(36).substr(2, 16) + Date.now().toString(36));
+    if (!localStorage.getItem("deviceId")) localStorage.setItem("deviceId", deviceId);
     const LANGUAGES = { bs: { flag: "🇧🇦", name: "Bosanski" }, en: { flag: "🇬🇧", name: "English" } };
     const T = { bs: { home:"Početna", categories:"Kategorije", favorites:"Omiljeno", messages:"Poruke", profile:"Profil", search:"Pretraži proizvode", guest:"Gost", login:"Prijava", register:"Registracija", loginOrReg:"Prijavite se za objavu oglasa", addAd:"Dodaj oglas", myAds:"Moji oglasi", language:"Jezik", logout:"Odjava", notifications:"Obavijesti", reports:"Prijave", users:"Korisnici", analytics:"Analitika", help:"Pomoć", about:"O aplikaciji", location:"Lokacija", darkMode:"Tamni režim", shareApp:"Podijeli", delete:"Obriši", edit:"Uredi", save:"Spremi", cancel:"Odustani", confirm:"Potvrdi", success:"Uspjeh", error:"Greška", sure:"Jeste li sigurni?", noAds:"Nema oglasa", noFavorites:"Nemate omiljenih proizvoda", noFavoritesHint:"Kliknite na srce da dodate u omiljene.", explore:"ISTRAŽI PONUDU", noMessages:"Nema poruka", noChats:"Nema razgovora", loading:"Učitavanje...", becomeSeller:"Postani Prodavač", buyer:"Kupac", sellerStatus:"Prodavač", verified:"Da", notVerified:"Ne" }, en: { home:"Home", categories:"Categories", favorites:"Favorites", messages:"Messages", profile:"Profile", search:"Search products", guest:"Guest", login:"Login", register:"Register", loginOrReg:"Login to post ads", addAd:"Add ad", myAds:"My ads", language:"Language", logout:"Logout", notifications:"Notifications", reports:"Reports", users:"Users", analytics:"Analytics", help:"Help", about:"About", location:"Location", darkMode:"Dark mode", shareApp:"Share", delete:"Delete", edit:"Edit", save:"Save", cancel:"Cancel", confirm:"Confirm", success:"Success", error:"Error", sure:"Are you sure?", noAds:"No ads", noFavorites:"No favorites", noFavoritesHint:"Click heart to add to favorites.", explore:"EXPLORE", noMessages:"No messages", noChats:"No chats", loading:"Loading...", becomeSeller:"Become Seller", buyer:"Buyer", sellerStatus:"Seller", verified:"Yes", notVerified:"No" } };
     const REPORT_REASONS = ["Nije domaći proizvod", "Sadrži alkohol", "Netočan opis", "Neodgovarajuća slika", "Ponavlja se", "Ostalo"];
@@ -177,9 +179,94 @@
     function getSellerRating(email) { const r = sellerRatings[email]; if (!r || !r.count) return null; return (r.total / r.count).toFixed(1); }
     function loadUserData() { db.collection("users").onSnapshot(snap => { userPhotos = {}; userNames = {}; allUsers = []; snap.forEach(d => { const data = d.data(); allUsers.push({ id: d.id, ...data }); if (data.email) { if (data.photo) userPhotos[data.email] = data.photo; if (data.name) userNames[data.email] = data.name; } }); }); }
     function centerOnMe() { if (!map) return; if (userLocation) { map.setView([userLocation.lat, userLocation.lng], 13); } else if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; map.setView([userLocation.lat, userLocation.lng], 13); if (myMarker) map.removeLayer(myMarker); myMarker = L.circleMarker([userLocation.lat, userLocation.lng], { radius: 8, color: "#2196F3", fillColor: "#2196F3", fillOpacity: 0.8 }).addTo(map); }); } }
-    function loginWithGoogle() { const provider = new firebase.auth.GoogleAuthProvider(); auth.signInWithPopup(provider).then(result => { const user = result.user; db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "" }, { merge: true }).then(() => { closeModal(); showConfirm("✅", "Prijava uspješna", () => { location.reload(); }); }); }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {})); }
-    auth.onAuthStateChanged(user => { currentUser = user; if (user && !user.isAnonymous) { db.collection("bannedEmails").doc(user.email).get().then(banDoc => { if (banDoc.exists) { const bannedUntil = new Date(banDoc.data().bannedUntil); if (bannedUntil > new Date()) { auth.signOut(); showConfirm("🚫", "Vaš nalog je banovan do " + bannedUntil.toLocaleDateString(), () => {}); return; } else { banDoc.ref.delete(); } } db.collection("admins").doc(user.email).get().then(d => { isUserAdmin = d.exists; }); db.collection("users").doc(user.uid).get().then(doc => { if (doc.exists) localStorage.setItem("domaceUser", JSON.stringify({ uid: user.uid, email: user.email, name: doc.data().name || user.displayName || user.email, city: doc.data().city || "", photo: doc.data().photo || user.photoURL || "", phone: doc.data().phone || "", isSeller: doc.data().isSeller || false, verified: doc.data().verified || false })); else db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "", isSeller: false, verified: false }); renderProfile(); listenForUnread(); }); }); } else if (!user) { localStorage.removeItem("domaceUser"); isUserAdmin = false; renderProfile(); } });
-    setTimeout(() => { document.getElementById("splash").style.display = "none"; document.getElementById("app").style.display = "block"; setTimeout(initMap, 300); loadAds(); loadSellerRatings(); loadUserData(); applyTheme(); applyTranslations(); initNotifications(); if (navigator.geolocation) navigator.geolocation.getCurrentPosition(pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; }); }, 1600);
+    
+    function checkBanStatus() {
+      const bannedDevice = localStorage.getItem("bannedDevice");
+      if (bannedDevice === "true") {
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;"><div style="font-size:60px;">🚫</div><h2>Nalog je banovan</h2><p>Ovaj uređaj je blokiran.</p></div>';
+        return true;
+      }
+      const u = getUser();
+      if (!u || !u.email) return false;
+      db.collection("bannedEmails").doc(u.email).get().then(doc => {
+        if (doc.exists) {
+          const data = doc.data();
+          const bannedUntil = new Date(data.bannedUntil);
+          if (bannedUntil > new Date()) {
+            localStorage.setItem("bannedDevice", "true");
+            localStorage.setItem("bannedEmail", u.email);
+            auth.signOut();
+            localStorage.removeItem("domaceUser");
+            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;"><div style="font-size:60px;">🚫</div><h2>Nalog je banovan</h2><p>Ban traje do: ' + bannedUntil.toLocaleDateString() + '</p></div>';
+          }
+        }
+      });
+      return false;
+    }
+    
+    function loginWithGoogle() {
+      if (checkBanStatus()) return;
+      const provider = new firebase.auth.GoogleAuthProvider();
+      auth.signInWithPopup(provider).then(result => {
+        const user = result.user;
+        db.collection("bannedEmails").doc(user.email).get().then(banDoc => {
+          if (banDoc.exists && new Date(banDoc.data().bannedUntil) > new Date()) {
+            localStorage.setItem("bannedDevice", "true");
+            auth.signOut();
+            showConfirm("🚫", "Ovaj nalog je banovan", () => {});
+            return;
+          }
+          db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "", deviceId: deviceId }, { merge: true }).then(() => { closeModal(); showConfirm("✅", "Prijava uspješna", () => { location.reload(); }); });
+        });
+      }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {}));
+    }
+    
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      if (user && !user.isAnonymous) {
+        db.collection("bannedEmails").doc(user.email).get().then(banDoc => {
+          if (banDoc.exists) {
+            const bannedUntil = new Date(banDoc.data().bannedUntil);
+            if (bannedUntil > new Date()) {
+              localStorage.setItem("bannedDevice", "true");
+              localStorage.setItem("bannedEmail", user.email);
+              auth.signOut();
+              showConfirm("🚫", "Vaš nalog je banovan do " + bannedUntil.toLocaleDateString(), () => location.reload());
+              return;
+            } else {
+              banDoc.ref.delete();
+            }
+          }
+          db.collection("admins").doc(user.email).get().then(d => { isUserAdmin = d.exists; });
+          db.collection("users").doc(user.uid).get().then(doc => {
+            if (doc.exists) localStorage.setItem("domaceUser", JSON.stringify({ uid: user.uid, email: user.email, name: doc.data().name || user.displayName || user.email, city: doc.data().city || "", photo: doc.data().photo || user.photoURL || "", phone: doc.data().phone || "", isSeller: doc.data().isSeller || false, verified: doc.data().verified || false }));
+            else db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "", isSeller: false, verified: false, deviceId: deviceId });
+            renderProfile();
+            listenForUnread();
+          });
+        });
+      } else if (!user) {
+        localStorage.removeItem("domaceUser");
+        isUserAdmin = false;
+        renderProfile();
+      }
+    });
+    
+    setTimeout(() => {
+      if (checkBanStatus()) return;
+      document.getElementById("splash").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      setTimeout(initMap, 300);
+      loadAds();
+      loadSellerRatings();
+      loadUserData();
+      applyTheme();
+      applyTranslations();
+      initNotifications();
+      if (navigator.geolocation) navigator.geolocation.getCurrentPosition(pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; });
+      setInterval(checkBanStatus, 15000);
+    }, 1600);
+    
     var map, currentChatWith = null, unsubscribeChat = null, allAds = [], unreadCount = 0, confirmCallback = null;
     function initMap() { map = L.map("map").setView([43.95, 17.8], 6.5); L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { attribution: "&copy; OpenStreetMap" }).addTo(map); setTimeout(() => map.invalidateSize(), 400); }
     async function getCityCoords(city) { if (!city) return null; const key = city.toLowerCase().trim(); if (cityCache[key]) return cityCache[key]; try { const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(city)}&limit=1`); const data = await res.json(); if (data?.[0]) { const c = [parseFloat(data[0].lat), parseFloat(data[0].lon)]; cityCache[key] = c; return c; } } catch(e) {} return null; }
@@ -242,7 +329,31 @@
     function submitReport(reason) { const userId = getUserId(); if (!reportingAdId) return; db.collection("reports").add({ adId: reportingAdId, reason, reporter: userId, time: firebase.firestore.FieldValue.serverTimestamp(), status: "new" }).then(() => { showConfirm("✅", t("success"), () => {}); closeReportModal(); }); }
     function loadReports() { db.collection("reports").orderBy("time", "desc").onSnapshot(snap => { document.getElementById("reports-list").innerHTML = snap.empty ? "<p style='text-align:center;padding:20px;'>📭 Nema prijava</p>" : snap.docs.map(d => { const r = d.data(), ad = allAds.find(a => a.id === r.adId); return `<div class="report-item"><div class="info" onclick="${r.adId ? `openAd('${r.adId}')` : ''}"><div class="product">${escapeHtml(ad?.product || r.reportedUser || "-")}</div><div class="reason">${escapeHtml(r.reason)}</div><div class="reporter">👤 ${escapeHtml(r.reporter)}</div></div><div class="actions">${r.adId ? `<button onclick="openAd('${r.adId}')" style="background:#1a5c2e;color:white;">👁️</button><button onclick="confirmDeleteAd('${r.adId}')" style="background:#e53935;color:white;">🗑️</button>` : ''}</div></div>`; }).join(""); }); }
     function loadUsers() { db.collection("users").onSnapshot(snap => { document.getElementById("users-list").innerHTML = `<div style="padding:12px;font-weight:bold;background:#f5f5f5;margin-bottom:8px;border-radius:8px;">👥 ${snap.size}</div>` + snap.docs.map(d => { const data = d.data(); const isBanned = data.banned && data.bannedUntil && new Date(data.bannedUntil) > new Date(); return `<div class="menu-item" style="border-bottom:1px solid #eee;padding:12px;display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;">${data.photo ? `<img src="${data.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;">👤</div>`}<div>${escapeHtml(data.name || data.email)} ${isBanned ? '<span style="color:#e53935; font-size:11px;">🚫</span>' : ''}</div></div><button onclick="banUser('${d.id}')" style="padding:6px 12px;background:#e53935;color:white;border:none;border-radius:6px;">🚫</button></div>`; }).join(""); }); }
-    function banUser(uid) { showConfirm("🚫", "Banovati korisnika na 3 mjeseca?", () => { const banUntil = new Date(); banUntil.setMonth(banUntil.getMonth() + 3); db.collection("users").doc(uid).update({ banned: true, bannedUntil: banUntil.toISOString(), bannedAt: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { db.collection("users").doc(uid).get().then(doc => { if (doc.exists && doc.data().email) { db.collection("bannedEmails").doc(doc.data().email).set({ email: doc.data().email, bannedUntil: banUntil.toISOString() }); } }); showConfirm("✅", "Korisnik banovan do " + banUntil.toLocaleDateString(), () => {}); loadUsers(); }); }); }
+    function banUser(uid) {
+      showConfirm("🚫", "Banovati korisnika na 3 mjeseca?", () => {
+        const banUntil = new Date();
+        banUntil.setMonth(banUntil.getMonth() + 3);
+        db.collection("users").doc(uid).get().then(doc => {
+          if (doc.exists && doc.data().email) {
+            const email = doc.data().email;
+            const userDeviceId = doc.data().deviceId || "";
+            db.collection("bannedEmails").doc(email).set({ 
+              email: email, 
+              bannedUntil: banUntil.toISOString(),
+              deviceId: userDeviceId,
+              bannedAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+              db.collection("users").doc(uid).update({ 
+                banned: true, 
+                bannedUntil: banUntil.toISOString() 
+              });
+              showConfirm("✅", "Korisnik banovan do " + banUntil.toLocaleDateString(), () => {});
+              loadUsers();
+            });
+          }
+        });
+      });
+    }
     function confirmDeleteAd(id) { showConfirm("🗑️", t("sure"), () => db.collection("ads").doc(id).delete().then(() => { showConfirm("✅", t("success"), () => {}); showScreen("reports"); })); }
     function showMessagesList() { if (unsubscribeChat) unsubscribeChat(); document.getElementById("messages-list").style.display = "block"; document.getElementById("chat-area").style.display = "none"; document.getElementById("chat-title").textContent = "💬 " + t("messages"); document.getElementById("chat-menu-btn").style.display = "none"; document.getElementById("chat-menu").style.display = "none"; const userId = getUserId(); db.collection("chats").where("participants", "array-contains", userId).onSnapshot(snap => { let totalUnread = 0; document.getElementById("messages-list").innerHTML = snap.empty ? "<p style='text-align:center;padding:30px;color:#999;'>📭 " + t("noChats") + "</p>" : snap.docs.map(d => { const data = d.data(), other = data.participants.find(p => p !== userId) || "?", unread = data.lastSender && data.lastSender !== userId && !data.readBy?.includes(userId); if (unread) totalUnread++; const photo = userPhotos[other]; const name = userNames[other] || (other.includes("@") ? other.split("@")[0] : "Gost"); return `<div class="chat-item"><div class="avatar" onclick="event.stopPropagation(); openSeller('${other}')">${photo ? `<img src="${photo}">` : "👤"}</div><div class="info" onclick="startChat('${other}')"><div class="name">${escapeHtml(name)}</div><div class="preview">${escapeHtml(data.lastMessage || "")}</div></div>${unread ? '<span class="chat-badge">1</span>' : ''}</div>`; }).join(""); unreadCount = totalUnread; updateBadge(); }); }
     async function startChat(withEmail) { await ensureGuestAuth(); const userId = getUserId(); if (!userId) return showConfirm("❌", "Greška", () => {}); currentChatWith = withEmail; const name = userNames[withEmail] || (withEmail.includes("@") ? withEmail.split("@")[0] : "Gost"); document.getElementById("chat-title").textContent = "💬 " + escapeHtml(name); document.getElementById("messages-list").style.display = "none"; document.getElementById("chat-area").style.display = "block"; document.getElementById("chat-menu-btn").style.display = "inline"; showScreen("messages"); const chatId = [userId, withEmail].sort().join("_"); db.collection("chats").doc(chatId).set({ participants: [userId, withEmail], updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }).then(() => { db.collection("chats").doc(chatId).update({ readBy: firebase.firestore.FieldValue.arrayUnion(userId) }).catch(() => {}); }); if (unsubscribeChat) unsubscribeChat(); unsubscribeChat = db.collection("chats").doc(chatId).collection("messages").orderBy("time").onSnapshot(snap => { const box = document.getElementById("chat-messages"); box.innerHTML = snap.docs.map(d => { const m = d.data(), isMe = m.sender === userId; return `<div style="margin:8px 0;text-align:${isMe?"right":"left"};"><div style="display:inline-block;background:${isMe?"#1a5c2e":"#eee"};color:${isMe?"white":"black"};padding:8px 12px;border-radius:12px;max-width:75%;">${m.image ? `<img src="${m.image}" style="max-width:180px;border-radius:8px;display:block;margin-bottom:4px;cursor:pointer;" onclick="openImageLightbox('${m.image}')">` : ""}${escapeHtml(m.text||"")}<div style="font-size:10px;opacity:0.7;margin-top:4px;">${m.time ? formatDate(m.time) : ""}</div></div></div>`; }).join("") || "<p style='text-align:center;color:#999;'>📭 " + t("noMessages") + "</p>"; box.scrollTop = box.scrollHeight; }, err => console.log("Chat error:", err)); }
@@ -255,9 +366,23 @@
     function shareMyLocation() { if (!navigator.geolocation) return showConfirm("❌", "GPS nije dostupan", () => {}); navigator.geolocation.getCurrentPosition(pos => { document.getElementById("chat-input").value = `📍 https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`; sendChatMessage(); }); }
     async function sendChatMessage() { await ensureGuestAuth(); const input = document.getElementById("chat-input"), text = input.value.trim(), userId = getUserId(); if (!text || !currentChatWith) return; const chatId = [userId, currentChatWith].sort().join("_"), ref = db.collection("chats").doc(chatId); ref.set({ participants: [userId, currentChatWith], lastMessage: text, lastSender: userId, readBy: [userId], updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); ref.collection("messages").add({ text, sender: userId, time: firebase.firestore.FieldValue.serverTimestamp() }); input.value = ""; }
     function sendChatImage(input) { const file = input.files[0]; if (!file || !currentChatWith) return; ensureGuestAuth().then(() => { const userId = getUserId(); const r = new FileReader(); r.onload = () => { const img = new Image(); img.onload = () => { const canvas = document.createElement("canvas"); const maxW = 600, maxH = 600; let w = img.width, h = img.height; if (w > maxW) { h = h * (maxW / w); w = maxW; } if (h > maxH) { w = w * (maxH / h); h = maxH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext("2d"); ctx.drawImage(img, 0, 0, w, h); const compressed = canvas.toDataURL("image/jpeg", 0.5); const chatId = [userId, currentChatWith].sort().join("_"); const ref = db.collection("chats").doc(chatId); ref.set({ participants: [userId, currentChatWith], lastMessage: "📷 Slika", lastSender: userId, readBy: [userId], updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); ref.collection("messages").add({ image: compressed, sender: userId, time: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { input.value = ""; }); }; img.src = r.result; }; r.readAsDataURL(file); }); }
-    function openModal(type) { isRegisterMode = type === "register"; document.getElementById("modalTitle").textContent = isRegisterMode ? "📝 " + t("register") : "🔑 " + t("login"); ["inputName","inputCity"].forEach(id => document.getElementById(id).style.display = isRegisterMode ? "block" : "none"); document.getElementById("authModal").style.display = "flex"; }
+    function openModal(type) { if (checkBanStatus()) return; isRegisterMode = type === "register"; document.getElementById("modalTitle").textContent = isRegisterMode ? "📝 " + t("register") : "🔑 " + t("login"); ["inputName","inputCity"].forEach(id => document.getElementById(id).style.display = isRegisterMode ? "block" : "none"); document.getElementById("authModal").style.display = "flex"; }
     function closeModal() { document.getElementById("authModal").style.display = "none"; document.getElementById("authForm").reset(); isRegisterMode = false; }
-    function handleAuth(e) { e.preventDefault(); const email = document.getElementById("inputEmail").value.trim(), password = document.getElementById("inputPassword").value, name = document.getElementById("inputName").value.trim(), city = document.getElementById("inputCity").value.trim(); if (!email || !password) return showConfirm("❌ " + t("error"), "", () => {}); if (isRegisterMode) auth.createUserWithEmailAndPassword(email, password).then(c => db.collection("users").doc(c.user.uid).set({ email, name: name||email, city, isSeller: false, verified: false })).then(() => { closeModal(); showConfirm("✅ " + t("success"), "", () => { location.reload(); }); }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {})); else auth.signInWithEmailAndPassword(email, password).then(() => { closeModal(); showConfirm("✅", "Prijava uspješna", () => { location.reload(); }); }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {})); }
+    function handleAuth(e) {
+      e.preventDefault();
+      if (checkBanStatus()) return;
+      const email = document.getElementById("inputEmail").value.trim(), password = document.getElementById("inputPassword").value, name = document.getElementById("inputName").value.trim(), city = document.getElementById("inputCity").value.trim();
+      if (!email || !password) return showConfirm("❌ " + t("error"), "", () => {});
+      db.collection("bannedEmails").doc(email).get().then(banDoc => {
+        if (banDoc.exists && new Date(banDoc.data().bannedUntil) > new Date()) {
+          localStorage.setItem("bannedDevice", "true");
+          showConfirm("🚫", "Ovaj nalog je banovan", () => {});
+          return;
+        }
+        if (isRegisterMode) auth.createUserWithEmailAndPassword(email, password).then(c => db.collection("users").doc(c.user.uid).set({ email, name: name||email, city, isSeller: false, verified: false, deviceId: deviceId })).then(() => { closeModal(); showConfirm("✅ " + t("success"), "", () => { location.reload(); }); }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {}));
+        else auth.signInWithEmailAndPassword(email, password).then(() => { closeModal(); showConfirm("✅", "Prijava uspješna", () => { location.reload(); }); }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {}));
+      });
+    }
     function editProfile() { showScreen("editprofile"); }
     function shareApp() { const url = "https://hadzicedin48-design.github.io/DomaceBIH/"; navigator.share ? navigator.share({ title: "Domace", url }) : (navigator.clipboard.writeText(url), showConfirm("📋", t("success"), () => {})); }
     function renderHelp() { document.getElementById("screen-help").innerHTML = `<header style="display:flex; align-items:center; gap:10px; padding:14px 16px;"><span style="font-size:24px; cursor:pointer;" onclick="goBack()">←</span><div class="logo-small">❓ Pomoć i Podrška</div></header><div style="padding:16px;"><div class="settings-card"><h3>Često postavljana pitanja</h3><div class="menu-item" onclick="showHelpDetail('ad')">Kako objaviti oglas?</div><div class="menu-item" onclick="showHelpDetail('contact')">Kako kontaktirati prodavača?</div><div class="menu-item" onclick="showHelpDetail('verified')">Kako postati provjereni prodavač?</div><div class="menu-item" onclick="showHelpDetail('chat')">Kako poslati poruku?</div><div class="menu-item" onclick="showHelpDetail('fav')">Kako dodati u omiljene?</div></div><div class="settings-card"><h3>Kontakt</h3><div class="menu-item" onclick="openEmail()">📧 domacebih01@gmail.com</div></div></div>`; }
