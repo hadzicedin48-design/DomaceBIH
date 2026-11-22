@@ -95,6 +95,8 @@
     .img-lightbox .close-btn { position: absolute; top: 20px; right: 20px; color: white; font-size: 32px; cursor: pointer; }
     .ad-actions { display: flex; gap: 8px; }
     .ad-actions button { width: 44px; height: 44px; border: none; border-radius: 12px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center; }
+    .user-banned { background: #ffebee !important; border-left: 4px solid #e53935; }
+    .user-banned .name { color: #e53935; }
   </style>
 </head>
 <body>
@@ -154,7 +156,7 @@
     const db = firebase.firestore(); const auth = firebase.auth();
     const ADMIN_EMAIL = "hadzicedin48@gmail.com"; const MAX_FREE_ADS = 5;
     const VAPID_KEY = "BL5a_cGRMsUMN01y13SlMR1zOcoJ9WGj1bGT4HplfVvAlUC0tBvxl_x_xFhCD2j5PSVMkafqEn9KSaATDyRyJ_M";
-    let currentCategory = "Sve", currentSort = "newest", reportingAdId = null, isRegisterMode = false, markers = [], myMarker = null, currentGallery = [], galleryIndex = 0, editingAdId = null, screenHistory = ["home"], mapVisible = false, currentUser = null, selectedPhotos = [], cityCache = {}, isUserAdmin = false, currentLang = localStorage.getItem("domaceLang") || "bs", currentRating = 0, ratingTarget = null, userLocation = null, sellerRatings = {}, lastUnreadCount = 0, guestId = localStorage.getItem("guestId") || ("guest_" + Date.now()), userPhotos = {}, userNames = {}, allUsers = [], messaging = null;
+    let currentCategory = "Sve", currentSort = "newest", reportingAdId = null, isRegisterMode = false, markers = [], myMarker = null, currentGallery = [], galleryIndex = 0, editingAdId = null, screenHistory = ["home"], mapVisible = false, currentUser = null, selectedPhotos = [], cityCache = {}, isUserAdmin = false, currentLang = localStorage.getItem("domaceLang") || "bs", currentRating = 0, ratingTarget = null, userLocation = null, sellerRatings = {}, lastUnreadCount = 0, guestId = localStorage.getItem("guestId") || ("guest_" + Date.now()), userPhotos = {}, userNames = {}, allUsers = [], messaging = null, userIP = null;
     if (!localStorage.getItem("guestId")) localStorage.setItem("guestId", guestId);
     const deviceId = localStorage.getItem("deviceId") || ("dev_" + Math.random().toString(36).substr(2, 16) + Date.now().toString(36));
     if (!localStorage.getItem("deviceId")) localStorage.setItem("deviceId", deviceId);
@@ -180,70 +182,103 @@
     function loadUserData() { db.collection("users").onSnapshot(snap => { userPhotos = {}; userNames = {}; allUsers = []; snap.forEach(d => { const data = d.data(); allUsers.push({ id: d.id, ...data }); if (data.email) { if (data.photo) userPhotos[data.email] = data.photo; if (data.name) userNames[data.email] = data.name; } }); }); }
     function centerOnMe() { if (!map) return; if (userLocation) { map.setView([userLocation.lat, userLocation.lng], 13); } else if (navigator.geolocation) { navigator.geolocation.getCurrentPosition(pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; map.setView([userLocation.lat, userLocation.lng], 13); if (myMarker) map.removeLayer(myMarker); myMarker = L.circleMarker([userLocation.lat, userLocation.lng], { radius: 8, color: "#2196F3", fillColor: "#2196F3", fillOpacity: 0.8 }).addTo(map); }); } }
     
-    function checkBanStatus() {
+    async function getUserIP() {
+      try {
+        const res = await fetch("https://api.ipify.org?format=json");
+        const data = await res.json();
+        userIP = data.ip;
+        localStorage.setItem("userIP", userIP);
+        return userIP;
+      } catch(e) {
+        userIP = localStorage.getItem("userIP") || null;
+        return userIP;
+      }
+    }
+    
+    async function checkBanStatus() {
       const bannedDevice = localStorage.getItem("bannedDevice");
       if (bannedDevice === "true") {
-        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;"><div style="font-size:60px;">🚫</div><h2>Nalog je banovan</h2><p>Ovaj uređaj je blokiran.</p></div>';
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;background:#fff;"><div style="font-size:60px;">🚫</div><h2 style="color:#e53935;">Nalog je banovan</h2><p>Ovaj uređaj je trajno blokiran.</p></div>';
         return true;
+      }
+      const ip = userIP || localStorage.getItem("userIP");
+      if (ip) {
+        const ipDoc = await db.collection("bannedIPs").doc(ip).get();
+        if (ipDoc.exists) {
+          localStorage.setItem("bannedDevice", "true");
+          document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;background:#fff;"><div style="font-size:60px;">🚫</div><h2 style="color:#e53935;">Nalog je banovan</h2><p>Vaša IP adresa je blokirana.</p></div>';
+          return true;
+        }
       }
       const u = getUser();
       if (!u || !u.email) return false;
-      db.collection("bannedEmails").doc(u.email).get().then(doc => {
-        if (doc.exists) {
-          const data = doc.data();
-          const bannedUntil = new Date(data.bannedUntil);
-          if (bannedUntil > new Date()) {
-            localStorage.setItem("bannedDevice", "true");
-            localStorage.setItem("bannedEmail", u.email);
-            auth.signOut();
-            localStorage.removeItem("domaceUser");
-            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;"><div style="font-size:60px;">🚫</div><h2>Nalog je banovan</h2><p>Ban traje do: ' + bannedUntil.toLocaleDateString() + '</p></div>';
-          }
-        }
-      });
+      const emailDoc = await db.collection("bannedEmails").doc(u.email).get();
+      if (emailDoc.exists) {
+        localStorage.setItem("bannedDevice", "true");
+        localStorage.setItem("bannedEmail", u.email);
+        auth.signOut();
+        localStorage.removeItem("domaceUser");
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;background:#fff;"><div style="font-size:60px;">🚫</div><h2 style="color:#e53935;">Nalog je banovan</h2><p>Vaš nalog je trajno blokiran.</p></div>';
+        return true;
+      }
       return false;
     }
     
     function loginWithGoogle() {
-      if (checkBanStatus()) return;
+      if (localStorage.getItem("bannedDevice") === "true") {
+        showConfirm("🚫", "Ovaj uređaj je banovan", () => {});
+        return;
+      }
       const provider = new firebase.auth.GoogleAuthProvider();
-      auth.signInWithPopup(provider).then(result => {
+      auth.signInWithPopup(provider).then(async result => {
         const user = result.user;
-        db.collection("bannedEmails").doc(user.email).get().then(banDoc => {
-          if (banDoc.exists && new Date(banDoc.data().bannedUntil) > new Date()) {
+        const ip = await getUserIP();
+        const banDoc = await db.collection("bannedEmails").doc(user.email).get();
+        if (banDoc.exists) {
+          localStorage.setItem("bannedDevice", "true");
+          auth.signOut();
+          showConfirm("🚫", "Ovaj nalog je banovan", () => {});
+          return;
+        }
+        if (ip) {
+          const ipBan = await db.collection("bannedIPs").doc(ip).get();
+          if (ipBan.exists) {
             localStorage.setItem("bannedDevice", "true");
             auth.signOut();
-            showConfirm("🚫", "Ovaj nalog je banovan", () => {});
+            showConfirm("🚫", "Vaša IP adresa je banovana", () => {});
             return;
           }
-          db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "", deviceId: deviceId }, { merge: true }).then(() => { closeModal(); showConfirm("✅", "Prijava uspješna", () => { location.reload(); }); });
-        });
+        }
+        db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "", deviceId: deviceId, ip: ip || "" }, { merge: true }).then(() => { closeModal(); showConfirm("✅", "Prijava uspješna", () => { location.reload(); }); });
       }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {}));
     }
     
-    auth.onAuthStateChanged(user => {
+    auth.onAuthStateChanged(async user => {
       currentUser = user;
       if (user && !user.isAnonymous) {
-        db.collection("bannedEmails").doc(user.email).get().then(banDoc => {
-          if (banDoc.exists) {
-            const bannedUntil = new Date(banDoc.data().bannedUntil);
-            if (bannedUntil > new Date()) {
-              localStorage.setItem("bannedDevice", "true");
-              localStorage.setItem("bannedEmail", user.email);
-              auth.signOut();
-              showConfirm("🚫", "Vaš nalog je banovan do " + bannedUntil.toLocaleDateString(), () => location.reload());
-              return;
-            } else {
-              banDoc.ref.delete();
-            }
+        const banDoc = await db.collection("bannedEmails").doc(user.email).get();
+        if (banDoc.exists) {
+          localStorage.setItem("bannedDevice", "true");
+          auth.signOut();
+          showConfirm("🚫", "Vaš nalog je banovan", () => location.reload());
+          return;
+        }
+        const ip = await getUserIP();
+        if (ip) {
+          const ipBan = await db.collection("bannedIPs").doc(ip).get();
+          if (ipBan.exists) {
+            localStorage.setItem("bannedDevice", "true");
+            auth.signOut();
+            showConfirm("🚫", "Vaša IP adresa je banovana", () => location.reload());
+            return;
           }
-          db.collection("admins").doc(user.email).get().then(d => { isUserAdmin = d.exists; });
-          db.collection("users").doc(user.uid).get().then(doc => {
-            if (doc.exists) localStorage.setItem("domaceUser", JSON.stringify({ uid: user.uid, email: user.email, name: doc.data().name || user.displayName || user.email, city: doc.data().city || "", photo: doc.data().photo || user.photoURL || "", phone: doc.data().phone || "", isSeller: doc.data().isSeller || false, verified: doc.data().verified || false }));
-            else db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "", isSeller: false, verified: false, deviceId: deviceId });
-            renderProfile();
-            listenForUnread();
-          });
+        }
+        db.collection("admins").doc(user.email).get().then(d => { isUserAdmin = d.exists; });
+        db.collection("users").doc(user.uid).get().then(doc => {
+          if (doc.exists) localStorage.setItem("domaceUser", JSON.stringify({ uid: user.uid, email: user.email, name: doc.data().name || user.displayName || user.email, city: doc.data().city || "", photo: doc.data().photo || user.photoURL || "", phone: doc.data().phone || "", isSeller: doc.data().isSeller || false, verified: doc.data().verified || false }));
+          else db.collection("users").doc(user.uid).set({ email: user.email, name: user.displayName || user.email, photo: user.photoURL || "", city: "", isSeller: false, verified: false, deviceId: deviceId, ip: ip || "" });
+          renderProfile();
+          listenForUnread();
         });
       } else if (!user) {
         localStorage.removeItem("domaceUser");
@@ -252,8 +287,9 @@
       }
     });
     
-    setTimeout(() => {
-      if (checkBanStatus()) return;
+    setTimeout(async () => {
+      await getUserIP();
+      if (await checkBanStatus()) return;
       document.getElementById("splash").style.display = "none";
       document.getElementById("app").style.display = "block";
       setTimeout(initMap, 300);
@@ -264,7 +300,7 @@
       applyTranslations();
       initNotifications();
       if (navigator.geolocation) navigator.geolocation.getCurrentPosition(pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; });
-      setInterval(checkBanStatus, 15000);
+      setInterval(checkBanStatus, 20000);
     }, 1600);
     
     var map, currentChatWith = null, unsubscribeChat = null, allAds = [], unreadCount = 0, confirmCallback = null;
@@ -328,29 +364,52 @@
     function closeReportModal() { document.getElementById("reportModal").style.display = "none"; reportingAdId = null; }
     function submitReport(reason) { const userId = getUserId(); if (!reportingAdId) return; db.collection("reports").add({ adId: reportingAdId, reason, reporter: userId, time: firebase.firestore.FieldValue.serverTimestamp(), status: "new" }).then(() => { showConfirm("✅", t("success"), () => {}); closeReportModal(); }); }
     function loadReports() { db.collection("reports").orderBy("time", "desc").onSnapshot(snap => { document.getElementById("reports-list").innerHTML = snap.empty ? "<p style='text-align:center;padding:20px;'>📭 Nema prijava</p>" : snap.docs.map(d => { const r = d.data(), ad = allAds.find(a => a.id === r.adId); return `<div class="report-item"><div class="info" onclick="${r.adId ? `openAd('${r.adId}')` : ''}"><div class="product">${escapeHtml(ad?.product || r.reportedUser || "-")}</div><div class="reason">${escapeHtml(r.reason)}</div><div class="reporter">👤 ${escapeHtml(r.reporter)}</div></div><div class="actions">${r.adId ? `<button onclick="openAd('${r.adId}')" style="background:#1a5c2e;color:white;">👁️</button><button onclick="confirmDeleteAd('${r.adId}')" style="background:#e53935;color:white;">🗑️</button>` : ''}</div></div>`; }).join(""); }); }
-    function loadUsers() { db.collection("users").onSnapshot(snap => { document.getElementById("users-list").innerHTML = `<div style="padding:12px;font-weight:bold;background:#f5f5f5;margin-bottom:8px;border-radius:8px;">👥 ${snap.size}</div>` + snap.docs.map(d => { const data = d.data(); const isBanned = data.banned && data.bannedUntil && new Date(data.bannedUntil) > new Date(); return `<div class="menu-item" style="border-bottom:1px solid #eee;padding:12px;display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;">${data.photo ? `<img src="${data.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;">👤</div>`}<div>${escapeHtml(data.name || data.email)} ${isBanned ? '<span style="color:#e53935; font-size:11px;">🚫</span>' : ''}</div></div><button onclick="banUser('${d.id}')" style="padding:6px 12px;background:#e53935;color:white;border:none;border-radius:6px;">🚫</button></div>`; }).join(""); }); }
+    function loadUsers() {
+      db.collection("users").onSnapshot(async snap => {
+        const bannedEmailsSnap = await db.collection("bannedEmails").get();
+        const bannedEmailsSet = new Set(bannedEmailsSnap.docs.map(d => d.id));
+        document.getElementById("users-list").innerHTML = `<div style="padding:12px;font-weight:bold;background:#f5f5f5;margin-bottom:8px;border-radius:8px;">👥 ${snap.size}</div>` + snap.docs.map(d => {
+          const data = d.data();
+          const isBanned = bannedEmailsSet.has(data.email);
+          return `<div class="menu-item ${isBanned ? 'user-banned' : ''}" style="border-bottom:1px solid #eee;padding:12px;display:flex;justify-content:space-between;align-items:center;"><div style="display:flex;align-items:center;gap:10px;">${data.photo ? `<img src="${data.photo}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;">` : `<div style="width:40px;height:40px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;">👤</div>`}<div class="name">${escapeHtml(data.name || data.email)} ${isBanned ? '<span style="color:#e53935; font-size:11px; font-weight:bold;">🚫 BAN</span>' : ''}</div></div><div style="display:flex; gap:6px;">${isBanned ? `<button onclick="unbanUser('${d.id}', '${data.email}')" style="padding:6px 12px;background:#4CAF50;color:white;border:none;border-radius:6px;">✅</button>` : `<button onclick="banUser('${d.id}')" style="padding:6px 12px;background:#e53935;color:white;border:none;border-radius:6px;">🚫</button>`}</div></div>`;
+        }).join("");
+      });
+    }
     function banUser(uid) {
-      showConfirm("🚫", "Banovati korisnika na 3 mjeseca?", () => {
-        const banUntil = new Date();
-        banUntil.setMonth(banUntil.getMonth() + 3);
-        db.collection("users").doc(uid).get().then(doc => {
+      showConfirm("🚫", "Banovati korisnika ZAUVIJEK (email + IP + uređaj)?", () => {
+        db.collection("users").doc(uid).get().then(async doc => {
           if (doc.exists && doc.data().email) {
             const email = doc.data().email;
-            const userDeviceId = doc.data().deviceId || "";
-            db.collection("bannedEmails").doc(email).set({ 
+            const userIPAddr = doc.data().ip || "";
+            await db.collection("bannedEmails").doc(email).set({ 
               email: email, 
-              bannedUntil: banUntil.toISOString(),
-              deviceId: userDeviceId,
+              forever: true,
               bannedAt: firebase.firestore.FieldValue.serverTimestamp()
-            }).then(() => {
-              db.collection("users").doc(uid).update({ 
-                banned: true, 
-                bannedUntil: banUntil.toISOString() 
-              });
-              showConfirm("✅", "Korisnik banovan do " + banUntil.toLocaleDateString(), () => {});
-              loadUsers();
             });
+            if (userIPAddr) {
+              await db.collection("bannedIPs").doc(userIPAddr).set({ 
+                ip: userIPAddr, 
+                email: email,
+                bannedAt: firebase.firestore.FieldValue.serverTimestamp()
+              });
+            }
+            await db.collection("users").doc(uid).update({ banned: true, forever: true });
+            showConfirm("✅", "Korisnik je trajno banovan", () => {});
+            loadUsers();
           }
+        });
+      });
+    }
+    function unbanUser(uid, email) {
+      showConfirm("✅", "Ukloniti ban za " + email + "?", () => {
+        db.collection("bannedEmails").doc(email).delete().then(async () => {
+          const userDoc = await db.collection("users").doc(uid).get();
+          if (userDoc.exists && userDoc.data().ip) {
+            await db.collection("bannedIPs").doc(userDoc.data().ip).delete();
+          }
+          await db.collection("users").doc(uid).update({ banned: false });
+          showConfirm("✅", "Ban uklonjen", () => {});
+          loadUsers();
         });
       });
     }
@@ -366,20 +425,29 @@
     function shareMyLocation() { if (!navigator.geolocation) return showConfirm("❌", "GPS nije dostupan", () => {}); navigator.geolocation.getCurrentPosition(pos => { document.getElementById("chat-input").value = `📍 https://maps.google.com/?q=${pos.coords.latitude},${pos.coords.longitude}`; sendChatMessage(); }); }
     async function sendChatMessage() { await ensureGuestAuth(); const input = document.getElementById("chat-input"), text = input.value.trim(), userId = getUserId(); if (!text || !currentChatWith) return; const chatId = [userId, currentChatWith].sort().join("_"), ref = db.collection("chats").doc(chatId); ref.set({ participants: [userId, currentChatWith], lastMessage: text, lastSender: userId, readBy: [userId], updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); ref.collection("messages").add({ text, sender: userId, time: firebase.firestore.FieldValue.serverTimestamp() }); input.value = ""; }
     function sendChatImage(input) { const file = input.files[0]; if (!file || !currentChatWith) return; ensureGuestAuth().then(() => { const userId = getUserId(); const r = new FileReader(); r.onload = () => { const img = new Image(); img.onload = () => { const canvas = document.createElement("canvas"); const maxW = 600, maxH = 600; let w = img.width, h = img.height; if (w > maxW) { h = h * (maxW / w); w = maxW; } if (h > maxH) { w = w * (maxH / h); h = maxH; } canvas.width = w; canvas.height = h; const ctx = canvas.getContext("2d"); ctx.drawImage(img, 0, 0, w, h); const compressed = canvas.toDataURL("image/jpeg", 0.5); const chatId = [userId, currentChatWith].sort().join("_"); const ref = db.collection("chats").doc(chatId); ref.set({ participants: [userId, currentChatWith], lastMessage: "📷 Slika", lastSender: userId, readBy: [userId], updated: firebase.firestore.FieldValue.serverTimestamp() }, { merge: true }); ref.collection("messages").add({ image: compressed, sender: userId, time: firebase.firestore.FieldValue.serverTimestamp() }).then(() => { input.value = ""; }); }; img.src = r.result; }; r.readAsDataURL(file); }); }
-    function openModal(type) { if (checkBanStatus()) return; isRegisterMode = type === "register"; document.getElementById("modalTitle").textContent = isRegisterMode ? "📝 " + t("register") : "🔑 " + t("login"); ["inputName","inputCity"].forEach(id => document.getElementById(id).style.display = isRegisterMode ? "block" : "none"); document.getElementById("authModal").style.display = "flex"; }
+    function openModal(type) { if (localStorage.getItem("bannedDevice") === "true") { showConfirm("🚫", "Ovaj uređaj je banovan", () => {}); return; } isRegisterMode = type === "register"; document.getElementById("modalTitle").textContent = isRegisterMode ? "📝 " + t("register") : "🔑 " + t("login"); ["inputName","inputCity"].forEach(id => document.getElementById(id).style.display = isRegisterMode ? "block" : "none"); document.getElementById("authModal").style.display = "flex"; }
     function closeModal() { document.getElementById("authModal").style.display = "none"; document.getElementById("authForm").reset(); isRegisterMode = false; }
     function handleAuth(e) {
       e.preventDefault();
-      if (checkBanStatus()) return;
+      if (localStorage.getItem("bannedDevice") === "true") { showConfirm("🚫", "Ovaj uređaj je banovan", () => {}); return; }
       const email = document.getElementById("inputEmail").value.trim(), password = document.getElementById("inputPassword").value, name = document.getElementById("inputName").value.trim(), city = document.getElementById("inputCity").value.trim();
       if (!email || !password) return showConfirm("❌ " + t("error"), "", () => {});
-      db.collection("bannedEmails").doc(email).get().then(banDoc => {
-        if (banDoc.exists && new Date(banDoc.data().bannedUntil) > new Date()) {
+      db.collection("bannedEmails").doc(email).get().then(async banDoc => {
+        if (banDoc.exists) {
           localStorage.setItem("bannedDevice", "true");
           showConfirm("🚫", "Ovaj nalog je banovan", () => {});
           return;
         }
-        if (isRegisterMode) auth.createUserWithEmailAndPassword(email, password).then(c => db.collection("users").doc(c.user.uid).set({ email, name: name||email, city, isSeller: false, verified: false, deviceId: deviceId })).then(() => { closeModal(); showConfirm("✅ " + t("success"), "", () => { location.reload(); }); }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {}));
+        const ip = await getUserIP();
+        if (ip) {
+          const ipBan = await db.collection("bannedIPs").doc(ip).get();
+          if (ipBan.exists) {
+            localStorage.setItem("bannedDevice", "true");
+            showConfirm("🚫", "Vaša IP adresa je banovana", () => {});
+            return;
+          }
+        }
+        if (isRegisterMode) auth.createUserWithEmailAndPassword(email, password).then(c => db.collection("users").doc(c.user.uid).set({ email, name: name||email, city, isSeller: false, verified: false, deviceId: deviceId, ip: ip || "" })).then(() => { closeModal(); showConfirm("✅ " + t("success"), "", () => { location.reload(); }); }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {}));
         else auth.signInWithEmailAndPassword(email, password).then(() => { closeModal(); showConfirm("✅", "Prijava uspješna", () => { location.reload(); }); }).catch(err => showConfirm("❌ " + t("error"), err.message, () => {}));
       });
     }
