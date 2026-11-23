@@ -195,38 +195,32 @@
       }
     }
     
-    async function checkBanStatus() {
-      try {
-        const bannedDevice = localStorage.getItem("bannedDevice");
-        if (bannedDevice === "true") {
-          document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;background:#fff;"><div style="font-size:60px;">🚫</div><h2 style="color:#e53935;">Nalog je banovan</h2><p>Ovaj uređaj je trajno blokiran.</p></div>';
-          return true;
-        }
-        const ip = userIP || localStorage.getItem("userIP");
-        if (ip) {
-          const ipDoc = await db.collection("bannedIPs").doc(ip).get();
-          if (ipDoc.exists) {
-            localStorage.setItem("bannedDevice", "true");
-            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;background:#fff;"><div style="font-size:60px;">🚫</div><h2 style="color:#e53935;">Nalog je banovan</h2><p>Vaša IP adresa je blokirana.</p></div>';
-            return true;
-          }
-        }
-        const u = getUser();
-        if (!u || !u.email) return false;
-        const emailDoc = await db.collection("bannedEmails").doc(u.email).get();
-        if (emailDoc.exists) {
-          localStorage.setItem("bannedDevice", "true");
-          auth.signOut();
-          localStorage.removeItem("domaceUser");
-          document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;background:#fff;"><div style="font-size:60px;">🚫</div><h2 style="color:#e53935;">Nalog je banovan</h2><p>Vaš nalog je trajno blokiran.</p></div>';
-          return true;
-        }
-        return false;
-      } catch(e) {
-        console.log("Ban check error:", e);
-        return false;
-      }
+   async function checkBanStatus() {
+  try {
+    const ip = userIP || localStorage.getItem("userIP");
+    const u = getUser();
+    let isBanned = false;
+    if (ip) {
+      const ipDoc = await db.collection("bannedIPs").doc(ip).get();
+      if (ipDoc.exists) isBanned = true;
     }
+    if (u && u.email) {
+      const emailDoc = await db.collection("bannedEmails").doc(u.email).get();
+      if (emailDoc.exists) isBanned = true;
+    }
+    if (isBanned) {
+      localStorage.setItem("bannedDevice", "true");
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;text-align:center;padding:20px;background:#fff;"><div style="font-size:60px;">🚫</div><h2 style="color:#e53935;">Nalog je banovan</h2><p>Kontaktirajte podršku.</p></div>';
+      return true;
+    } else {
+      localStorage.removeItem("bannedDevice");
+      return false;
+    }
+  } catch(e) {
+    console.log("Ban check error:", e);
+    return false;
+  }
+}
     
     function loginWithGoogle() {
       if (localStorage.getItem("bannedDevice") === "true") {
