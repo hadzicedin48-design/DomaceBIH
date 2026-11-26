@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>DOMAĆE BIH</title>
+<title>Domace</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a5c2e">
 <link rel="stylesheet" href="style.css">
@@ -12,9 +12,264 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<style>
+body.dark{background:#121212!important;color:#eee!important}
+body.dark .screen{background:#1e1e1e!important;color:#eee!important}
+body.dark header{background:#0d3d1f!important}
+body.dark .bottom-nav{background:#1e1e1e!important;border-color:#333!important}
+body.dark .menu-item,body.dark .product-card,body.dark .settings-card,body.dark .analytics-card,body.dark .myad-card{background:#2a2a2a!important;color:#eee!important}
+body.dark .search-bar,body.dark .filters,body.dark .chip:not(.active),body.dark .filter-bar{background:#2a2a2a!important;color:#eee!important;border-color:#444!important}
+body.dark .chip.active{background:#1a5c2e!important;color:#fff!important}
+body.dark select,body.dark .form-input,body.dark .form-select{background:#2a2a2a!important;color:#eee!important;border-color:#444!important}
+body.dark .modal-content{background:#2a2a2a!important;color:#eee!important}
+body.dark .notif-panel{background:#1e1e1e!important;color:#eee!important}
+body.dark .notif-item{background:#2a2a2a!important;border-color:#444!important}
+body.dark #chat-messages{background:#1a1a1a!important}
+body.dark .quick-bar,body.dark .input-bar{background:#2a2a2a!important}
+body.dark .nav-item{color:#aaa!important}
+body.dark .nav-item.active{color:#4caf50!important}
+body.dark .form-label{color:#aaa!important}
+body.dark .delete-reason{background:#2a2a2a!important;border-color:#444!important;color:#eee!important}
+body.dark .delete-reason.selected{background:#1a5c2e!important}
+body.dark .lang-item{background:#2a2a2a!important;border-color:#444!important}
+body.dark .category-card{background:#2a2a2a!important;color:#eee!important}
+body.dark .product-mini{background:#2a2a2a!important;color:#eee!important}
+body.dark .empty-state{color:#aaa!important}
+body.dark .section-title{color:#eee!important}
+body.dark .chat-menu{background:#2a2a2a!important}
+body.dark .chat-menu-item:hover{background:#333!important}
+body.dark .toast{background:#2a2a2a!important;color:#eee!important}
+body.dark .report-card{background:#2a2a2a!important}
+body.dark .edit-card{background:#2a2a2a!important;border-color:#444!important}
+body.dark .checkbox-item{background:#333!important;border-color:#444!important}
+body.dark .cat-option{background:#2a2a2a!important;border-color:#444!important;color:#eee!important}
+body.dark .cat-option.selected{background:#1a5c2e!important;color:#fff!important}
+body.dark .unit-option{background:#2a2a2a!important;border-color:#444!important;color:#eee!important}
+body.dark .unit-option.selected{background:#1a5c2e!important;color:#fff!important}
+body.dark .price-sheet{background:#1e1e1e!important}
+body.dark .price-option{background:#2a2a2a!important;color:#eee!important;border-color:#444!important}
+body.dark .price-option.selected{background:#1a5c2e!important;color:#fff!important}
+.photo-upload{border:2px dashed #1a5c2e;border-radius:16px;padding:30px 16px;text-align:center;margin:16px 0;cursor:pointer;background:#f9fff9;transition:all .3s}
+body.dark .photo-upload{background:#1a3a2a!important}
+.success-check{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:80px;color:#1a5c2e;z-index:9999;animation:popIn .4s ease;pointer-events:none}
+@keyframes popIn{0%{transform:translate(-50%,-50%) scale(0);opacity:0}50%{transform:translate(-50%,-50%) scale(1.2)}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}
+.settings-card{background:#fff;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.profile-header-card{display:flex;align-items:center;gap:12px}
+.profile-header-card .avatar{width:50px;height:50px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden}
+.profile-header-card .avatar img{width:100%;height:100%;object-fit:cover}
+.profile-header-card .info{flex:1}
+.profile-header-card .name{font-weight:600;font-size:16px}
+.profile-header-card .btn-edit{border:1px solid #1a5c2e;color:#1a5c2e;background:#fff;padding:6px 12px;border-radius:20px;font-size:13px;transition:all .2s}
+body.dark .profile-header-card .btn-edit{background:#2a2a2a!important;color:#4caf50!important;border-color:#4caf50!important}
+.menu-item{padding:14px 16px;border-bottom:1px solid #eee;cursor:pointer;font-size:15px;display:flex;align-items:center;gap:12px;transition:background .2s}
+body.dark .menu-item{border-color:#444!important}
+.menu-item:hover{background:#f5f5f5}
+body.dark .menu-item:hover{background:#333!important}
+.menu-item .icon{font-size:20px;width:28px}
+.menu-item .value{margin-left:auto;color:#666;font-size:14px}
+body.dark .menu-item .value{color:#aaa!important}
+.btn-green{background:#1a5c2e;color:#fff;border:none;border-radius:8px;padding:12px 16px;font-size:15px;cursor:pointer;transition:all .2s}
+.btn-green:hover{background:#145024;transform:scale(1.02)}
+.btn-green:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn-red{background:#e53935;color:#fff;border:none;border-radius:25px;padding:14px 16px;font-size:15px;cursor:pointer;width:100%;font-weight:600;transition:all .2s}
+.btn-red:disabled{opacity:.5;cursor:not-allowed}
+.btn-google{background:#fff;border:1px solid #ddd;color:#333;padding:12px 16px;border-radius:8px;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;font-size:15px;cursor:pointer;margin-bottom:10px;transition:all .2s}
+body.dark .btn-google{background:#2a2a2a!important;color:#eee!important;border-color:#444!important}
+.btn-gps{background:#2196F3;color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:14px;cursor:pointer;margin-bottom:14px;transition:all .2s}
+.btn-gps:disabled{opacity:.5;cursor:not-allowed}
+body.dark .btn-gps{background:#1565C0!important}
+.forgot-link{color:#1a5c2e;font-size:13px;cursor:pointer;text-decoration:underline;margin-top:10px;display:block;text-align:center}
+body.dark .forgot-link{color:#4caf50!important}
+.analytics-card{background:#fff;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);animation:fadeIn .3s ease}
+.analytics-stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.analytics-stats .stat{padding:12px;text-align:center;background:#f9f9f9;border-radius:12px;transition:transform .2s}
+body.dark .analytics-stats .stat{background:#333!important}
+.analytics-stats .stat .icon{font-size:24px;margin-bottom:4px}
+.analytics-stats .stat .value{font-size:22px;font-weight:700;color:#1a5c2e}
+body.dark .analytics-stats .stat .value{color:#4caf50!important}
+.analytics-stats .stat .label{font-size:12px;color:#666}
+body.dark .analytics-stats .stat .label{color:#aaa!important}
+.lang-item{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #eee;cursor:pointer;transition:background .2s}
+.lang-item.active{background:#e8f5e9}
+body.dark .lang-item.active{background:#1a3a2a!important}
+.user-banned{background:#ffebee!important;border-left:4px solid #e53935}
+body.dark .user-banned{background:#3a1a1a!important}
+.empty-state{text-align:center;padding:60px 20px;animation:fadeIn .4s ease}
+.empty-state .icon-circle{width:100px;height:100px;border-radius:50%;background:#e8f5e9;display:flex;align-items:center;justify-content:center;margin:0 auto 20px;font-size:40px;color:#1a5c2e;animation:pulse 2s infinite}
+body.dark .empty-state .icon-circle{background:#1a3a2a!important;color:#4caf50!important}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.categories-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+.category-card{background:#fff;border-radius:16px;padding:24px 12px;text-align:center;box-shadow:0 2px 8px rgba(0,0,0,.08);cursor:pointer;transition:all .2s;animation:fallDown .6s ease backwards}
+.category-card:nth-child(1){animation-delay:.05s}.category-card:nth-child(2){animation-delay:.1s}.category-card:nth-child(3){animation-delay:.15s}.category-card:nth-child(4){animation-delay:.2s}.category-card:nth-child(5){animation-delay:.25s}.category-card:nth-child(6){animation-delay:.3s}.category-card:nth-child(7){animation-delay:.35s}.category-card:nth-child(8){animation-delay:.4s}
+@keyframes fallDown{0%{opacity:0;transform:translateY(-80px) scale(.8)}100%{opacity:1;transform:translateY(0) scale(1)}}
+.category-card:hover{transform:translateY(-4px);box-shadow:0 4px 16px rgba(0,0,0,.12)}
+.category-card .icon{font-size:36px;margin-bottom:8px}
+.seller-header{display:flex;align-items:flex-start;gap:16px;padding:16px;animation:fadeIn .3s ease}
+.seller-header .avatar{width:70px;height:70px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;overflow:hidden}
+body.dark .seller-header .avatar{background:#333!important}
+.seller-header .avatar img{width:100%;height:100%;object-fit:cover}
+.seller-stats{display:flex;justify-content:space-around;padding:16px;border-top:1px solid #eee;border-bottom:1px solid #eee;text-align:center}
+body.dark .seller-stats{border-color:#444!important}
+.seller-stats .stat .value{font-size:22px;font-weight:700;color:#1a5c2e}
+body.dark .seller-stats .stat .value{color:#4caf50!important}
+.seller-stats .stat .label{font-size:12px;color:#666}
+body.dark .seller-stats .stat .label{color:#aaa!important}
+.products-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:12px}
+.product-mini{background:#fff;border-radius:12px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.06);cursor:pointer;transition:all .2s}
+.product-mini:hover{transform:scale(1.05)}
+.product-mini img{width:60px;height:60px;object-fit:cover;border-radius:8px;margin-bottom:6px}
+.product-mini .name{font-size:12px;font-weight:500}
+.product-mini .price{font-size:13px;font-weight:600;color:#1a5c2e}
+body.dark .product-mini .price{color:#4caf50!important}
+.chat-badge{background:#e53935;color:#fff;border-radius:10px;font-size:11px;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 5px;margin-left:auto;animation:bounce .5s ease}
+@keyframes bounce{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.img-lightbox{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.9);z-index:99999;display:flex;align-items:center;justify-content:center;animation:fadeIn .2s ease}
+.img-lightbox img{max-width:95%;max-height:95%;object-fit:contain}
+.img-lightbox .close-btn{position:absolute;top:20px;right:20px;color:#fff;font-size:32px;cursor:pointer}
+.product-card{animation:fadeIn .3s ease;transition:all .2s;display:flex;gap:12px;align-items:center;background:#fff;border-radius:12px;padding:10px;margin-bottom:10px}
+.product-card img{object-fit:cover}
+.product-card .product-info{flex:1;min-width:0}
+.product-card .distance-block{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;min-width:55px;padding:4px}
+.distance-text{font-size:13px;color:#2196F3;font-weight:600;white-space:nowrap}
+.distance-request{font-size:11px;color:#888;cursor:pointer;text-decoration:underline}
+.distance-request:hover{color:#2196F3}
+.chip{transition:all .2s}
+.chip:hover{transform:scale(1.05)}
+.unread-chat{background:#e8f5e9!important;border-left:3px solid #1a5c2e}
+body.dark .unread-chat{background:#1a3a2a!important;border-left-color:#4caf50!important}
+.toggle-switch{position:relative;width:50px;height:28px;margin-left:auto}
+.toggle-switch input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#e53935;border-radius:28px;transition:.3s}
+.toggle-slider:before{position:absolute;content:"";height:22px;width:22px;left:3px;bottom:3px;background:#fff;border-radius:50%;transition:.3s}
+.toggle-switch input:checked+.toggle-slider{background:#1a5c2e}
+.toggle-switch input:checked+.toggle-slider:before{transform:translateX(22px)}
+.gallery-container{position:relative;width:100%;height:220px;overflow:hidden;border-radius:12px;margin-bottom:12px}
+.gallery-container img{width:100%;height:100%;object-fit:cover;transition:transform .3s}
+.gallery-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.5);color:#fff;border:none;width:36px;height:36px;border-radius:50%;font-size:18px;cursor:pointer;z-index:10}
+.gallery-arrow.prev{left:10px}.gallery-arrow.next{right:10px}
+.gallery-dots{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);display:flex;gap:6px}
+.gallery-dots span{width:8px;height:8px;border-radius:50%;background:rgba(255,255,255,.5)}
+.gallery-dots span.active{background:#fff}
+.ad-actions{display:flex;gap:6px;flex-shrink:0}
+.ad-action-btn{width:36px;height:36px;border-radius:8px;border:none;font-size:14px;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.ad-action-btn:hover{transform:scale(1.1)}
+.ad-action-btn.share{background:#2196F3;color:#fff}
+.ad-action-btn.edit{background:#1a5c2e;color:#fff}
+.ad-action-btn.delete{background:#e53935;color:#fff}
+.ad-action-btn.sold{background:#ff9800;color:#fff}
+.notif-bell{position:relative;cursor:pointer;font-size:22px}
+.notif-badge{position:absolute;top:-6px;right:-8px;background:#e53935;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 4px}
+.notif-panel{position:fixed;top:0;right:0;width:100%;max-width:360px;height:100%;background:#fff;z-index:9999;box-shadow:-4px 0 20px rgba(0,0,0,.15);transform:translateX(100%);transition:transform .3s ease;overflow-y:auto}
+.notif-panel.open{transform:translateX(0)}
+.notif-panel-header{background:#1a5c2e;color:#fff;padding:16px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0}
+.notif-item{padding:14px 16px;border-bottom:1px solid #eee;display:flex;gap:12px;align-items:flex-start;animation:fadeIn .3s ease;cursor:pointer}
+.notif-item:hover{background:#f5f5f5}
+body.dark .notif-item:hover{background:#333!important}
+.notif-item .icon{font-size:24px}
+.notif-item .text{flex:1}
+.notif-item .text .title{font-weight:500}
+.notif-item .text .time{font-size:12px;color:#888;margin-top:4px}
+.toast{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:24px 32px;border-radius:16px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:99999;text-align:center;animation:popIn .3s ease}
+.toast.success{border-top:4px solid #1a5c2e}
+.toast.error{border-top:4px solid #e53935}
+.delete-reasons{display:flex;flex-direction:column;gap:8px;margin:16px 0}
+.delete-reason{padding:12px 16px;border:1px solid #ddd;border-radius:8px;cursor:pointer;transition:all .2s}
+.delete-reason:hover,.delete-reason.selected{background:#e8f5e9;border-color:#1a5c2e}
+.form-input{width:100%;padding:14px 16px;border:1px solid #e0e0e0;border-radius:12px;font-size:16px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:all .2s;outline:none;box-sizing:border-box}
+.form-input:focus{border-color:#1a5c2e;box-shadow:0 0 0 3px rgba(26,92,46,.1)}
+.form-input:disabled{background:#f5f5f5;color:#888}
+body.dark .form-input:disabled{background:#333!important;color:#aaa!important}
+.form-label{font-size:13px;color:#555;margin-bottom:6px;display:flex;align-items:center;gap:6px;font-weight:500}
+.char-counter{font-size:12px;color:#888;text-align:right;margin-top:4px;margin-bottom:8px}
+.char-counter.warning{color:#ff9800}
+.char-counter.danger{color:#e53935}
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:#f8f9fa;display:flex;align-items:center;justify-content:space-around;height:68px;padding:0;border-top:1px solid #eee;z-index:100}
+body.dark .bottom-nav{background:#1e1e1e!important;border-color:#333!important}
+.nav-item{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;padding:6px 0;transition:all .2s;color:#777;position:relative}
+.nav-item.active{color:#1a5c2e}
+.nav-item svg{width:24px;height:24px;min-width:24px;min-height:24px;display:block;transition:all .2s}
+.nav-item.active svg{filter:drop-shadow(0 0 4px rgba(26,92,46,.5))}
+.nav-item .nav-label{font-size:11px;line-height:1.15;white-space:nowrap;font-weight:500}
+.myad-card{display:flex;align-items:center;gap:10px;background:#fff;border-radius:16px;padding:12px;margin-bottom:10px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.myad-info{flex:1;min-width:0;cursor:pointer}
+.myad-title{font-weight:600;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.myad-price{color:#1a5c2e;font-weight:600;font-size:14px;margin-top:2px}
+body.dark .myad-price{color:#4caf50!important}
+.chat-menu{position:absolute;top:50px;right:10px;background:#fff;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,.15);z-index:1000;overflow:hidden;display:none}
+.chat-menu.open{display:block}
+.chat-menu-item{padding:14px 18px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background .2s;font-size:22px}
+.chat-menu-item:hover{background:#f5f5f5}
+.msg-time{font-size:10px;opacity:.7;margin-top:4px}
+.ban-screen{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:999999;display:flex;align-items:center;justify-content:center;flex-direction:column;text-align:center;padding:20px}
+.photo-preview-item{position:relative;display:inline-block}
+.photo-preview-item img{width:70px;height:70px;object-fit:cover;border-radius:8px}
+.photo-preview-item .remove-photo{position:absolute;top:-6px;right:-6px;background:#e53935;color:#fff;border:none;width:20px;height:20px;border-radius:50%;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.report-card{background:#fff;border-radius:12px;padding:14px;margin:10px;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.report-card .report-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.report-card .report-reason{color:#e53935;font-size:13px;margin:4px 0}
+.report-card .report-actions{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.report-card .report-actions button{flex:1;padding:8px;border:none;border-radius:6px;cursor:pointer;font-size:13px;min-width:80px}
+.report-card .report-actions button:disabled{opacity:.5;cursor:not-allowed}
+.warning-note{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:10px;margin:10px 0;font-size:13px;color:#856404}
+body.dark .warning-note{background:#3d3200!important;color:#ffc107!important;border-color:#ffc107!important}
+.edit-card{background:#fff;border-radius:16px;padding:16px;margin:12px;box-shadow:0 2px 8px rgba(0,0,0,.06);border:1px solid #eee}
+.edit-card h3{margin:0 0 14px;font-size:16px;color:#1a5c2e;display:flex;align-items:center;gap:8px}
+body.dark .edit-card h3{color:#4caf50!important}
+.checkbox-item{display:flex;align-items:center;gap:10px;padding:12px;background:#f9f9f9;border-radius:8px;margin-bottom:8px;border:1px solid #eee}
+.checkbox-item input[type="checkbox"]{width:20px;height:20px;accent-color:#1a5c2e}
+.checkbox-item label{flex:1;font-size:14px;cursor:pointer}
+.danger-zone{border:2px solid #e53935;border-radius:16px;padding:16px;margin:12px;background:#fff5f5}
+body.dark .danger-zone{background:#2a1a1a!important;border-color:#e53935!important}
+.danger-zone h3{color:#e53935;margin:0 0 10px;font-size:15px}
+.disclaimer{background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:12px;margin:12px 0;font-size:13px;color:#856404}
+body.dark .disclaimer{background:#3d3200!important;color:#ffc107!important}
+.admin-badge{background:#e53935;color:#fff;border-radius:10px;font-size:10px;min-width:16px;height:16px;line-height:16px;text-align:center;padding:0 4px;margin-left:6px}
+.profile-nav-badge{position:absolute;top:4px;right:calc(50% - 24px);width:10px;height:10px;background:#e53935;border-radius:50%;display:none}
+.donation-btn{font-size:20px;cursor:pointer;margin-right:4px}
+.header-admin-badge{background:#e53935;color:#fff;border-radius:10px;font-size:10px;min-width:18px;height:18px;line-height:18px;text-align:center;padding:0 5px;cursor:pointer;margin-left:4px}
+.modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:10000;display:none;align-items:center;justify-content:center}
+.modal-content{background:#fff;border-radius:16px;padding:20px;max-width:400px;width:90%;max-height:80vh;overflow-y:auto;position:relative}
+body.dark .modal-content{background:#2a2a2a!important;color:#eee!important}
+.modal .close{position:absolute;top:10px;right:14px;font-size:24px;cursor:pointer}
+.admin-stats-row{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+.admin-stat-box{background:#f5f5f5;padding:10px 14px;border-radius:10px;text-align:center;flex:1;min-width:70px;cursor:pointer;transition:transform .2s}
+.admin-stat-box:hover{transform:scale(1.02)}
+body.dark .admin-stat-box{background:#333!important}
+.admin-stat-box .num{font-size:20px;font-weight:700;color:#1a5c2e}
+body.dark .admin-stat-box .num{color:#4caf50!important}
+.admin-stat-box .lbl{font-size:11px;color:#666}
+body.dark .admin-stat-box .lbl{color:#aaa!important}
+.cat-options{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.cat-option{padding:12px 8px;border:2px solid #e0e0e0;border-radius:12px;text-align:center;cursor:pointer;transition:all .2s;background:#fff}
+.cat-option:hover{border-color:#1a5c2e;transform:scale(1.02)}
+.cat-option.selected{background:#1a5c2e;border-color:#1a5c2e;color:#fff}
+.cat-option .icon{font-size:24px;display:block;margin-bottom:4px}
+.cat-option .label{font-size:12px;font-weight:500}
+.unit-options{display:flex;gap:8px;margin-bottom:14px}
+.unit-option{flex:1;padding:12px;border:2px solid #e0e0e0;border-radius:12px;text-align:center;cursor:pointer;transition:all .2s;background:#fff;font-weight:500}
+.unit-option:hover{border-color:#1a5c2e}
+.unit-option.selected{background:#1a5c2e;border-color:#1a5c2e;color:#fff}
+.map-locate-btn{position:absolute;bottom:10px;right:10px;background:#fff;border:none;width:44px;height:44px;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.2);cursor:pointer;font-size:20px;z-index:1000;display:flex;align-items:center;justify-content:center}
+.map-locate-btn:hover{background:#f5f5f5}
+body.dark .map-locate-btn{background:#2a2a2a!important;color:#eee!important}
+.price-sheet-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:10000;display:none;align-items:flex-end;justify-content:center}
+.price-sheet-overlay.open{display:flex}
+.price-sheet{background:#fff;width:100%;max-width:500px;border-radius:20px 20px 0 0;padding:20px;animation:slideUp .3s ease}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.price-sheet h3{margin:0 0 16px;text-align:center;color:#1a5c2e}
+body.dark .price-sheet h3{color:#4caf50!important}
+.price-option{padding:14px 16px;border:1px solid #e0e0e0;border-radius:12px;margin-bottom:8px;cursor:pointer;transition:all .2s;background:#fff;display:flex;align-items:center;justify-content:space-between}
+.price-option:hover{border-color:#1a5c2e}
+.price-option.selected{background:#1a5c2e;border-color:#1a5c2e;color:#fff}
+.price-option .check{display:none}
+.price-option.selected .check{display:inline}
+.price-reset{width:100%;padding:14px;background:#eee;border:none;border-radius:12px;font-size:15px;cursor:pointer;margin-top:8px}
+body.dark .price-reset{background:#333!important;color:#eee!important}
+</style>
 </head>
 <body>
-<div class="splash" id="splash"><img src="logo.png" alt="Logo" class="logo"><h1>DOMAĆE BIH</h1><p>LOKALNO, SVJEŽE, ZDRAVO</p><div class="loader"></div><p class="loading-text" id="splash-text">Učitavanje...</p></div>
+<div class="splash" id="splash"><img src="logo.png" alt="Logo" class="logo"><h1>DOMACE</h1><p>LOKALNO, SVJEZE, ZDRAVO</p><div class="loader"></div><p class="loading-text" id="splash-text">Učitavanje...</p></div>
 <div class="app" id="app" style="display:none">
 <div class="screen" id="screen-home"><header style="display:flex;justify-content:space-between;align-items:center"><div class="logo-small">🌿 DOMAĆE BIH</div><div style="display:flex;align-items:center;gap:6px"><span class="donation-btn" id="donation-btn" onclick="openDonationModal()" title="Dobrovoljna donacija">🎁</span><div class="notif-bell" id="notif-bell" onclick="toggleNotifPanel()" style="display:none">🔔<span class="notif-badge" id="notif-count" style="display:none">0</span></div><span class="header-admin-badge" id="header-admin-badge" style="display:none" onclick="showScreen('reports')" title="Nove prijave">0</span></div></header><div class="search-bar"><input type="text" id="search-input" placeholder="Pretraži proizvode" oninput="renderHomeProducts()"></div><div class="filters" id="home-filters"><button class="chip active" onclick="setCategory('Sve',this)">Sve</button><button class="chip" onclick="setCategory('Voce',this)">🍎 Voće</button><button class="chip" onclick="setCategory('Povrce',this)">🥕 Povrće</button><button class="chip" onclick="setCategory('Mlijeko',this)">🥛 Mlijeko</button><button class="chip" onclick="setCategory('Meso',this)">🥩 Meso</button><button class="chip" onclick="setCategory('Jaja',this)">🥚 Jaja</button><button class="chip" onclick="setCategory('Pica',this)">🥤 Pića</button><button class="chip" onclick="setCategory('Dzem',this)">🍯 Džemovi</button><button class="chip" onclick="setCategory('RucniRad',this)">🎨 Ručni rad</button><button class="chip" onclick="setCategory('Ostalo',this)">📦 Ostalo</button></div><div style="padding:8px 12px;background:#fff;display:flex;gap:8px;overflow-x:auto;align-items:center;flex-wrap:wrap" class="filter-bar"><button class="chip" id="map-btn" onclick="toggleMap()">🗺️ Mapa</button><button class="chip" id="nearby-btn" onclick="showNearbyAds()">📍 U blizini</button><button class="chip active" id="newest-btn" onclick="setSort('newest',this)">🆕 Najnoviji</button><button class="chip" id="available-btn" onclick="setSort('available',this)">✅ Dostupni</button><button class="chip" id="price-btn" onclick="openPriceSheet()">💰 Cijena</button></div><div id="map" style="height:0;overflow:hidden;transition:height .3s;position:relative"><button class="map-locate-btn" onclick="locateMeOnMap()" title="Moja lokacija">📍</button></div><div class="section-title" id="nearby-title">📍 Najbliži proizvodi</div><div class="products" id="home-products"></div></div>
 <div class="screen" id="screen-profile" style="display:none"><header style="display:flex;justify-content:space-between;align-items:center;padding:14px 16px"><div class="logo-small">🌿 DOMAĆE BIH</div></header><div id="profile-content"></div></div>
@@ -270,7 +525,7 @@ function closeReportModal(){document.getElementById("reportModal").style.display
 function submitReport(reason){if(!canReport())return;const id=getUserId();if(!reportingAdId)return;db.collection("reports").add({adId:reportingAdId,reason:cleanInput(reason),reporter:id,time:firebase.firestore.FieldValue.serverTimestamp(),status:"new",reviewedByAdmin:false}).then(()=>{showToast("✅","Prijava poslana");closeReportModal()}).catch(e=>showToast("❌","Greška: "+e.message,true))}
 
 function toggleChatMenu(){document.getElementById("chat-menu").classList.toggle("open")}
-function confirmDeleteChat(){closeChatMenu();if(!requireAuth())return;showConfirm("🗑️","Obrisati chat?",()=>{const id=(getUser()?.email||anonymousUid||guestId).toLowerCase();const cid=getChatId(id,currentChatWith.toLowerCase());db.collection("chats").doc(cid).delete().then(()=>{showToast("✅","Chat obrisan");showMessagesList()}).catch(e=>showToast("❌","Greška: "+e.message,true))})}
+function confirmDeleteChat(){closeChatMenu();showConfirm("🗑️","Obrisati chat?",()=>{const id=(getUser()?.email||anonymousUid||guestId).toLowerCase(),cid=getChatId(id,currentChatWith.toLowerCase());db.collection("chats").doc(cid).delete().then(()=>{showToast("✅","Chat obrisan");showMessagesList()}).catch(e=>showToast("❌","Greška: "+e.message,true))})}
 function confirmBlockUser(){closeChatMenu();if(!requireAuth())return;showConfirm("🚫","Blokirati korisnika?",()=>{const id=(getUser()?.email||anonymousUid||guestId).toLowerCase();db.collection("blocks").add({blocker:id,blocked:currentChatWith.toLowerCase(),time:firebase.firestore.FieldValue.serverTimestamp()}).then(()=>{blockedUsers.push(currentChatWith.toLowerCase());showToast("✅","Korisnik blokiran");showMessagesList()}).catch(e=>showToast("❌","Greška: "+e.message,true))})}
 function openReportUserModal(){closeChatMenu();document.getElementById("reportUserModal").style.display="flex"}
 function closeReportUserModal(){document.getElementById("reportUserModal").style.display="none"}
@@ -284,7 +539,7 @@ async function sendChatMessage(){if(!canAct())return;lockAction();const authResu
 function sendChatImage(e){const f=e.files[0];if(!f||!currentChatWith)return;if(f.size>5*1024*1024)return showToast("⚠️","Slika prevelika",true);const r=new FileReader;r.onload=()=>{const i=new Image;i.onload=async()=>{const authResult=await ensureAnonymousAuth();if(!authResult&&!currentUser)return;const c=document.createElement("canvas");let w=i.width,h=i.height;if(w>600){h*=600/w;w=600}if(h>600){w*=600/h;h=600}c.width=w;c.height=h;c.getContext("2d").drawImage(i,0,0,w,h);const d=c.toDataURL("image/jpeg",0.5),u=getUser(),myId=(u?.email||anonymousUid||guestId).toLowerCase(),cid=getChatId(myId,currentChatWith.toLowerCase()),ref=db.collection("chats").doc(cid);try{await ref.set({participants:[myId,currentChatWith.toLowerCase()],guestName:getGuestName(),lastMessage:"📷 Slika",lastSender:myId,updated:firebase.firestore.FieldValue.serverTimestamp(),readBy:[myId]},{merge:true});await ref.collection("messages").add({image:d,sender:myId,senderName:u?.name||getGuestName(),time:firebase.firestore.FieldValue.serverTimestamp()})}catch(e){showToast("❌","Greška: "+(e.message||e.code||"Nepoznata"),true)}};i.src=r.result};r.readAsDataURL(f)}
 
 function loadReports(){if(!requireAdmin())return;const sortedReports=[...allReports].sort((a,b)=>getTimestamp(b.time)-getTimestamp(a.time));const unreviewed=sortedReports.filter(r=>r.status==="new"&&r.reviewedByAdmin!==true);document.getElementById("reports-header").innerHTML=unreviewed.length>0?`<button onclick="markAllReportsReviewed()" id="markReviewedBtn" class="btn-green" style="width:100%">✓ Označi sve kao pregledane (${unreviewed.length})</button>`:"";document.getElementById("reports-list").innerHTML=sortedReports.length?sortedReports.map(r=>{const time=formatDateTime(r.time);const adId=r.adId||r.productId||r.itemId||r.targetId;if(r.type==="user")return`<div class="report-card" data-report-id="${r.id}"><div class="report-header"><span style="font-weight:600">👤 ${escapeHtml(r.reportedUser||"-")}</span><span style="font-size:11px;color:#888">${time}</span></div><div class="report-reason">⚠️ ${escapeHtml(r.reason)}</div><div style="font-size:12px;color:#888">Od: ${escapeHtml(r.reporter||"-")}</div><div style="font-size:11px;color:#1a5c2e;margin-top:4px">Tip: Prijava korisnika/chata | Status: ${r.status||"new"}${r.reviewedByAdmin?" | Pregledano":""}</div>${r.warned?'<div style="font-size:11px;color:#ff9800;margin-top:4px">⚠️ Upozorenje poslano</div>':""}<div class="report-actions"><button class="detail-btn" data-report-id="${r.id}" style="background:#2196F3;color:#fff">🔍 Detalji</button><button class="warn-btn" data-report-id="${r.id}" data-user="${escapeHtml(r.reportedUser||"")}" data-reason="${escapeHtml(r.reason||"")}" style="background:#ff9800;color:#fff">⚠️ Upozori</button><button class="resolve-btn" data-report-id="${r.id}" style="background:#4CAF50;color:#fff">✓ Riješeno</button></div></div>`;const a=allAds.find(x=>x.id===adId);const adDeleted=!a||a.status==="Obrisano";return`<div class="report-card" data-ad-id="${adId||""}" data-report-id="${r.id}"><div class="report-header"><span style="font-weight:600">${adDeleted?"🗑️ Oglas obrisan":escapeHtml(a?.product||"Oglas")}</span><span style="font-size:11px;color:#888">${time}</span></div><div class="report-reason">⚠️ ${escapeHtml(r.reason)}</div><div style="font-size:12px;color:#888">Od: ${escapeHtml(r.reporter||"-")} | Prodavač: ${escapeHtml(a?.ownerName||"-")}</div><div class="report-actions">${adDeleted?`<button class="remove-report-btn" data-report-id="${r.id}" style="background:#e53935;color:#fff">🗑️ Ukloni prijavu</button>`:`<button class="open-ad-btn" data-ad-id="${adId}" style="background:#1a5c2e;color:#fff">👁️ Otvori oglas</button><button class="delete-ad-btn" data-ad-id="${adId}" data-report-id="${r.id}" style="background:#e53935;color:#fff">🗑️ Obriši oglas</button>`}</div></div>`}).join(""):"<p style='text-align:center;padding:20px'>Nema prijava</p>";bindReportButtons()}
-function markAllReportsReviewed(){if(!requireAdmin())return;const btn=document.getElementById("markReviewedBtn");if(btn)btn.disabled=true;const unreviewed=allReports.filter(r=>r.status==="new"&&r.reviewedByAdmin!==true);if(!unreviewed.length){if(btn)btn.disabled=false;return showToast("ℹ️","Nema nepregledanih prijava")}const batch=db.batch();unreviewed.forEach(r=>{batch.update(db.collection("reports").doc(r.id),{reviewedByAdmin:true})});batch.commit().then(()=>{showToast("✅","Sve prijave označene kao pregledane");if(btn)btn.disabled=false}).catch(e=>{showToast("❌","Greška: "+e.message,true);if(btn)btn.disabled=false})}
+function markAllReportsReviewed(){if(!requireAdmin())return;const btn=document.getElementById("markReviewedBtn");if(btn)btn.disabled=true;const unreviewed=allReports.filter(r=>r.status==="new"&&r.reviewedByAdmin!==true);if(!unreviewed.length)return showToast("ℹ️","Nema nepregledanih prijava");const batch=db.batch();unreviewed.forEach(r=>{batch.update(db.collection("reports").doc(r.id),{reviewedByAdmin:true})});batch.commit().then(()=>{showToast("✅","Sve prijave označene kao pregledane");if(btn)btn.disabled=false}).catch(e=>{showToast("❌","Greška: "+e.message,true);if(btn)btn.disabled=false})}
 function bindReportButtons(){document.querySelectorAll(".open-ad-btn").forEach(btn=>{btn.onclick=async()=>{const adId=btn.dataset.adId;if(!adId)return showToast("ℹ️","Oglas nije pronađen",true);let a=allAds.find(x=>x.id===adId);if(!a){try{const doc=await db.collection("ads").doc(adId).get();if(doc.exists)a={id:doc.id,...doc.data()}}catch(e){console.log("Fetch ad error:",e)}}if(a&&a.status!=="Obrisano")openAd(adId);else showToast("ℹ️","Oglas je obrisan ili ne postoji",true)}});document.querySelectorAll(".delete-ad-btn").forEach(btn=>{btn.onclick=()=>{if(!requireAdmin())return;const adId=btn.dataset.adId;if(adId)showConfirm("🗑️","Obrisati oglas i ukloniti iz svih favorita?",()=>{btn.disabled=true;deleteAdCompletely(adId)})}});document.querySelectorAll(".remove-report-btn").forEach(btn=>{btn.onclick=()=>{if(!requireAdmin())return;const reportId=btn.dataset.reportId;if(reportId)showConfirm("🗑️","Ukloniti prijavu?",()=>{btn.disabled=true;db.collection("reports").doc(reportId).delete().then(()=>{showToast("✅","Prijava uklonjena");loadReports()}).catch(e=>showToast("❌","Greška: "+e.message,true))})}});document.querySelectorAll(".resolve-btn").forEach(btn=>{btn.onclick=()=>{if(!requireAdmin())return;const reportId=btn.dataset.reportId;if(reportId){btn.disabled=true;db.collection("reports").doc(reportId).update({status:"resolved",reviewedByAdmin:true}).then(()=>{showToast("✅","Prijava označena kao riješena");loadReports()}).catch(e=>showToast("❌","Greška: "+e.message,true))}}});document.querySelectorAll(".detail-btn").forEach(btn=>{btn.onclick=()=>{const reportId=btn.dataset.reportId;if(reportId)openReportDetailModal(reportId)}});document.querySelectorAll(".warn-btn").forEach(btn=>{btn.onclick=()=>{if(!requireAdmin())return;const reportId=btn.dataset.reportId,userEmail=btn.dataset.user,reason=btn.dataset.reason;if(reportId&&userEmail)openReportDetailModal(reportId)}})}
 function openReportDetailModal(reportId){const r=allReports.find(x=>x.id===reportId);if(!r)return showToast("ℹ️","Prijava nije pronađena",true);currentReportForWarning=r;document.getElementById("reportDetailContent").innerHTML=`<div style="margin-bottom:8px"><strong>Prijavljeni:</strong> ${escapeHtml(r.reportedUser||"-")}</div><div style="margin-bottom:8px"><strong>Prijavio:</strong> ${escapeHtml(r.reporter||"-")}</div><div style="margin-bottom:8px"><strong>Razlog:</strong> ${escapeHtml(r.reason||"-")}</div><div style="margin-bottom:8px"><strong>Datum:</strong> ${formatDateTime(r.time)}</div><div style="margin-bottom:8px"><strong>Status:</strong> ${r.status||"new"}</div>${r.warned?'<div style="color:#ff9800">⚠️ Upozorenje već poslano</div>':""}`;document.getElementById("warningMessage").value=DEFAULT_WARNING+(r.reason?" (Razlog prijave: "+r.reason+")":"");document.getElementById("reportDetailModal").style.display="flex"}
 function closeReportDetailModal(){document.getElementById("reportDetailModal").style.display="none";currentReportForWarning=null}
