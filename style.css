@@ -271,5 +271,4 @@ body.dark .price-reset { background: #333 !important; color: #eee !important; }
 .search-bar { padding: 12px; background: #fff; }
 .search-bar input { width: 100%; padding: 12px 16px; border: 1px solid #ddd; border-radius: 25px; font-size: 15px; outline: none; }
 .filters { display: flex; gap: 8px; padding: 12px; overflow-x: auto; background: white; }
-.section-title { padding: 12px 16px; font-weight: 600; color: #333; }
-.products { padding: 12px; }
+.section-title { padding: 12px 16px; 
