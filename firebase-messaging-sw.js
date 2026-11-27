@@ -1,30 +1,11 @@
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js');
-importScripts('https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js');
+// firebase-messaging-sw.js - Service Worker za push notifikacije
+// Ostavljen prazan / minimalan jer je sistem notifikacija na zvoncetu u aplikaciji.
+// Ako kasnije aktivirate FCM, dodajte konfiguraciju ovdje.
 
-firebase.initializeApp({
-  apiKey: "AIzaSyDgXYpb32iMlAJBeZyLgP6xC8mWfpytsiM",
-  authDomain: "domacebih-99bc3.firebaseapp.com",
-  projectId: "domacebih-99bc3",
-  storageBucket: "domacebih-99bc3.firebasestorage.app",
-  messagingSenderId: "990089586929",
-  appId: "1:990089586929:web:1c643f76a92405a5c8e150"
+self.addEventListener('install', (event) => {
+  self.skipWaiting();
 });
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage(payload => {
-  const title = payload.notification?.title || "Domaće BIH";
-  const options = {
-    body: payload.notification?.body || "Nova obavijest",
-    icon: "/logo.png",
-    badge: "/logo.png",
-    tag: "domace-notification",
-    renotify: true
-  };
-  self.registration.showNotification(title, options);
-});
-
-self.addEventListener('notificationclick', event => {
-  event.notification.close();
-  event.waitUntil(clients.openWindow('/'));
+self.addEventListener('activate', (event) => {
+  event.waitUntil(clients.claim());
 });
