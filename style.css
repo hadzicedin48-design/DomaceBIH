@@ -272,3 +272,5 @@ body.dark .price-reset { background: #333 !important; color: #eee !important; }
 .filters { display: flex; gap: 8px; padding: 12px; overflow-x: auto; background: white; }
 .section-title { padding: 12px 16px; font-weight: 600; color: #333; }
 .products { padding: 12px; padding-bottom: 90px; }
+
+#profile-content { padding-bottom: 90px; }
