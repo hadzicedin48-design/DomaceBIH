@@ -13,7 +13,7 @@ firebase.initializeApp({
 const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage(payload => {
-  const title = payload.notification?.title || "Domaće BIH";
+  const title = payload.notification?.title || "Domaće";
   const options = {
     body: payload.notification?.body || "Nova obavijest",
     icon: "./logo.png",
