@@ -38,13 +38,13 @@ body.dark .price-sheet { background: #1e1e1e !important; }
 body.dark .price-option { background: #2a2a2a !important; color: #eee !important; border-color: #444 !important; }
 body.dark .price-option.selected { background: #1a5c2e !important; color: #fff !important; }
 
-.splash { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #f8f6f0; text-align: center; }
-.logo { width: 150px; height: 150px; border-radius: 32px; margin-bottom: 16px; }
-.splash h1 { color: #1a5c2e; font-size: 26px; }
-.splash p { color: #1a5c2e; font-size: 13px; letter-spacing: 1px; margin: 6px 0 30px; }
-.loader { width: 34px; height: 34px; border: 3px solid #ddd; border-top: 3px solid #1a5c2e; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
+.splash { display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100vh; background: #1a5c2e; text-align: center; }
+.logo { width: 150px; height: 150px; border-radius: 50%; margin-bottom: 16px; }
+.splash h1 { color: #ffffff; font-size: 26px; }
+.splash p { color: #e8f5e9; font-size: 13px; letter-spacing: 1px; margin: 6px 0 30px; }
+.loader { width: 34px; height: 34px; border: 3px solid rgba(255,255,255,.35); border-top: 3px solid #ffffff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 10px; }
 @keyframes spin { to { transform: rotate(360deg); } }
-.loading-text { color: #777; font-size: 13px; }
+.loading-text { color: #e8f5e9; font-size: 13px; }
 
 .back-btn { background: none; border: none; padding: 4px; cursor: pointer; color: inherit; display: flex; align-items: center; }
 .back-btn svg { width: 22px; height: 22px; }
